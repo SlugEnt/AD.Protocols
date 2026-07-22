@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="../ConsoleApp/ConsoleApp.csproj" />
+  <Project Path="../Test.ADProtocols/Test.ADProtocols.csproj" />
+  <Project Path="AD.Protocols.csproj" />
+</Solution>
