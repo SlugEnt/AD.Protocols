@@ -117,7 +117,8 @@ public class ActiveDirectoryConnector : EngineBase
 
             // Use AuthType.Negotiate for Windows domain networks, or AuthType.Basic for standard user/pass over secure lines.
             LdapConnection.AuthType = AuthType.Negotiate;
-             LdapConnection.Bind();
+            LdapConnection.Bind();
+            IsConnected = true;
 
             return Result.Ok();
         }
@@ -132,6 +133,13 @@ public class ActiveDirectoryConnector : EngineBase
             return Result.Fail(new ExceptionalError("Unexpected exception occurred", ex));
         }
     }
+
+
+    /// <summary>
+    /// Returns True if the AD Connector is connected to the AD Server.
+    /// Note, this does not mean that the connection is still valid, just that it was able to connect at some point
+    /// </summary>
+    public bool IsConnected { get; private set; } = false;
 
 
     /// <summary>
@@ -928,6 +936,72 @@ public class ActiveDirectoryConnector : EngineBase
         }
     }
 
+    /// <summary>
+    ///     Returns a list of users who match the criteria.  If no users are found, it returns an empty list.
+    /// </summary>
+    /// <param name="searchContainerDn"></param>
+    /// <param name="searchScope"></param>
+    /// <param name="searchFilter"></param>
+    /// <param name="attributesToReturn"></param>
+    /// <returns></returns>
+    public Result<List<ADpReadOnlyGroup>> GroupFindOneOrMore(string searchContainerDn,
+                                                           SearchScope searchScope,
+                                                           string searchFilter,
+                                                           List<string> attributesToReturn)
+    {
+        try
+        {
+            if (attributesToReturn.Count == 0)
+            {
+                // Add in some of the basic ones.
+                ADpUserFromAD_RO.AddBaseAttributes(attributesToReturn);
+            }
+
+
+            Result<List<SearchResponse>> resultResponse = SearchDirectory(searchContainerDn,
+                                                                          searchFilter,
+                                                                          searchScope,
+                                                                          [.. attributesToReturn]);
+            if (resultResponse.IsFailed)
+            {
+                return Result.Fail(resultResponse.Errors);
+            }
+
+            if (resultResponse.Value.Count == 0)
+            {
+                return Result.Fail("No active directory users found", EnumReasonCode.NotFound);
+            }
+
+            if (resultResponse.Value[0].Entries.Count == 0)
+            {
+                return Result.Fail("No active directory users found", EnumReasonCode.NotFound);
+            }
+
+
+
+
+
+            List<ADpReadOnlyGroup> groups = new();
+            foreach (SearchResultEntry searchResultEntry in resultResponse.Value[0].Entries)
+            {
+                Result<ADpReadOnlyGroup> result = ADpReadOnlyGroup.CreateGroupObj(searchResultEntry.Attributes);
+                if (result.IsFailed)
+                {
+                    return Result.Fail($"Failed to convert AD object to Group Object {searchResultEntry.DistinguishedName}");
+                }
+
+                groups.Add(result.Value);
+            }
+
+
+            return Result.Ok(groups);
+        }
+        catch (Exception e)
+        {
+            return Result.Fail(new ExceptionalError("Unexpected exception occured", e));
+        }
+    }
+
 
     /// <summary>
     ///     Finds a single user in the directory.  If more than one is found, it returns an error.
@@ -1058,6 +1132,9 @@ public class ActiveDirectoryConnector : EngineBase
             return Result.Fail(new ExceptionalError("Unexpected exception occured", e));
         }
     }
+
+
+    
 
 
 

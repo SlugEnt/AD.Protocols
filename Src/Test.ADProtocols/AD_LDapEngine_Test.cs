@@ -22,10 +22,15 @@ public class AD_LDapEngine_Test
 {
 #pragma warning disable IDE0079
 #pragma warning disable NUnit2045
+
+    private Ad_SupportInitializer asi;
+
+
     [SetUp]
     public void Setup()
     {
-
+        asi = Ad_SupportInitializer.GetInitializer();
+        asi.Initialize();
     }
 
 
@@ -58,19 +63,12 @@ public class AD_LDapEngine_Test
     public void RootOuSetAtConstruction()
     {
         // A.  Setup
-        SupportMethods sm = new();
+        
 
-
-        // B.  Pre Setup Validation
-
-
-        // C.  Execute
-        ActiveDirectoryConnector adEngine = new(null);
-
-
+        
         // Z1. Validate
-        ADSPath expected = ADSPath.FromDomainName("");
-        Assert.That(adEngine.DomainRoot.ToString(), Is.EqualTo(expected.ToString()), "Z-100: Root was not set to domain");
+        ADSPath expected = ADSPath.FromDomainName(asi.ActiveDirConfig.Domain);
+        Assert.That(asi.ADConnector.DomainRoot.ToString(), Is.EqualTo(expected.ToString()), "Z-100: Root was not set to domain");
     }
 
 
@@ -84,12 +82,12 @@ public class AD_LDapEngine_Test
     [TestCase(HelperMethods.UTBASE)]
     public void UTAddOu(string baseOuToAdd)
     {
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer();
+        
 
         Result         addResult;
         try
         {
-            addResult = asi.AdEngine.OuCreate(HelperMethods.UTBASE, asi.UnitTestRoot);
+            addResult = asi.ADConnector.OuCreate(HelperMethods.UTBASE, asi.UnitTestRoot);
         }
         catch (Exception e)
         {
@@ -103,9 +101,9 @@ public class AD_LDapEngine_Test
             {
                 
                 ADSPath deletePath   = asi.UnitTestRoot.NewChildADSPath("ou=" + HelperMethods.UTBASE);
-                Result  deleteResult =asi.AdEngine.OuDeleteAll(deletePath);
+                Result  deleteResult =asi.ADConnector.OuDeleteAll(deletePath);
                 Assert.That(deleteResult.IsSuccess, Is.True, "Z-10:  Cleanup of prior version of UT OU failed.  Failed to delete it.");
-                _ = asi.AdEngine.OuCreate(HelperMethods.UTBASE, asi.UnitTestRoot);
+                _ = asi.ADConnector.OuCreate(HelperMethods.UTBASE, asi.UnitTestRoot);
             }
             else
             {
@@ -114,7 +112,7 @@ public class AD_LDapEngine_Test
         }
 
         // If here we just need to test that the OU was created.
-        Result<SearchResultEntry> searchResult = asi.AdEngine.FindSingleOuAtPath(asi.UnitTestRoot, HelperMethods.UTBASE);
+        Result<SearchResultEntry> searchResult = asi.ADConnector.FindSingleOuAtPath(asi.UnitTestRoot, HelperMethods.UTBASE);
         Assert.That(searchResult.IsSuccess, "Z-100:  OU was not found after creation");
     }
 
@@ -130,7 +128,7 @@ public class AD_LDapEngine_Test
     [TestCase(HelperMethods.UTBASE)]
     public void UTDeleteOu(string baseOuToDelete)
     {
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer();
+        
 
         /*
         SupportMethods sm       = new(false, false);
@@ -155,9 +153,9 @@ public class AD_LDapEngine_Test
     [TestCase(HelperMethods.UTBASE)]
     public void FindSingleOuAtPath(string baseOuToFind)
     {
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer();
+        
 
-        Result<SearchResultEntry> searchResult = asi.AdEngine.FindSingleOuAtPath(asi.UnitTestRoot, baseOuToFind);
+        Result<SearchResultEntry> searchResult = asi.ADConnector.FindSingleOuAtPath(asi.UnitTestRoot, baseOuToFind);
         Assert.That(searchResult.IsSuccess, Is.True, "Z-100:  Unable to find the OU - " + baseOuToFind + " AppError" + searchResult.Reasons);
     }
 

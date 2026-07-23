@@ -1,5 +1,4 @@
-﻿
-using Bogus.DataSets;
+﻿using Bogus.DataSets;
 using SlugEnt.AD.Protocols.Attributes;
 using SlugEnt.AD.Protocols;
 using SlugEnt.IS;
@@ -13,10 +12,20 @@ namespace UT.ActiveDirectory_Tests;
 
 [TestFixture]
 public class AD_User_Tests
-    {
+{
 #pragma warning disable IDE0079
 #pragma warning disable NUnit2045
 
+    private Ad_SupportInitializer asi;
+
+
+
+    [SetUp]
+    public void Setup()         
+    {
+        asi = Ad_SupportInitializer.GetInitializer();
+        asi.Initialize();
+    }
 
     /// <summary>
     /// Confirms we can change a user's password.
@@ -24,21 +33,19 @@ public class AD_User_Tests
     [Test]
     public void Password_CanChange()
     {
-        // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer();
-
+        // A --> Setup        
         // Create a random userFromAdRo OU
         Result<ADSPath> newOuResult = asi.CreateRandomOu();
         Assert.That(newOuResult.IsSuccess, Is.True, "A-100: Unable to create the unique containing OU for this test.  Errors: " + newOuResult.ToStringWithLineFeeds());
 
         // Create Test User Basic
-        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, SupportMethods.Faker);
-        testUser.CreateUser(asi.AdEngine);
+        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, asi.Faker);
+        testUser.CreateUser(asi.ADConnector);
 
         // C.  Retrieve the User
         // Read the user back to ensure it was created
         ADpUserFromAD_RO?        userFromAD;
-        Result<ADpUserFromAD_RO> foundUser = asi.AdEngine.UserGetByDn(asi.UnitTestParent.Path, testUser.User.DistinquishedName, SearchScope.Subtree);
+        Result<ADpUserFromAD_RO> foundUser = asi.ADConnector.UserGetByDn(asi.UnitTestParent.Path, testUser.User.DistinquishedName, SearchScope.Subtree);
 
         Assert.That(foundUser.IsSuccess, Is.True, "C-100:  Failed to find TestUser --> AppError: " + foundUser.ToStringWithLineFeeds());
         userFromAD = foundUser.Value;
@@ -57,7 +64,7 @@ public class AD_User_Tests
         ];
 
 
-        Result<ModifyResponse> changePasswordResult = asi.AdEngine.UserUpdate(userFromAD.DistinguishedName, [.. attributes2]);
+        Result<ModifyResponse> changePasswordResult = asi.ADConnector.UserUpdate(userFromAD.DistinguishedName, [.. attributes2]);
         Assert.That(changePasswordResult.IsSuccess, Is.True, "Z-400:  FAILED: " + changePasswordResult.ToStringWithLineFeeds());
 
         uacFirst.RemoveFlag(EnumUserAccountControlFlags.PASSWD_NOTREQD);
@@ -73,7 +80,6 @@ public class AD_User_Tests
     public void UserChangeFullTest()
     {
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer();
 
         // B. More Setup
         // Create a random userFromAdRo OU
@@ -81,14 +87,14 @@ public class AD_User_Tests
         Assert.That(newOuResult.IsSuccess, Is.True, "A-100: Unable to create the unique containing OU for this test.  Errors: " + newOuResult.ToStringWithLineFeeds());
 
         // Create Test User Basic
-        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, SupportMethods.Faker);
-        testUser.CreateUser(asi.AdEngine);
+        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, asi.Faker);
+        testUser.CreateUser(asi.ADConnector);
 
 
         // C.  Retrieve the User
         // Read the user back to ensure it was created
         ADpUserFromAD_RO?        userFromAD;
-        Result<ADpUserFromAD_RO> foundUser = asi.AdEngine.UserGetByDn(asi.UnitTestParent.Path, testUser.User.DistinquishedName, SearchScope.Subtree);
+        Result<ADpUserFromAD_RO> foundUser = asi.ADConnector.UserGetByDn(asi.UnitTestParent.Path, testUser.User.DistinquishedName, SearchScope.Subtree);
 
         Assert.That(foundUser.IsSuccess, Is.True, "C-100:  Failed to find TestUser --> AppError: " + foundUser.ToStringWithLineFeeds());
         userFromAD = foundUser.Value;
@@ -96,26 +102,26 @@ public class AD_User_Tests
 
 
         // D. Change all of the common userFromAdRo properties.
-        Name newRandomName = SupportMethods.Faker.Name;
+        Name newRandomName = asi.Faker.Name;
         ADpUserEditable userEditable = new(userFromAD)
         {
             PasswordChg = "Password23!",
             TitleChg = newRandomName.JobTitle(),
-            PhoneChg = SupportMethods.Faker.Phone.PhoneNumber(),
+            PhoneChg = asi.Faker.Phone.PhoneNumber(),
             FirstNameChg = newRandomName.FirstName(),
             LastNameChg = newRandomName.LastName(),
             DisplayNameChg = newRandomName.FullName(),
             IsDisabled = false,
             DepartmentFullNameChg = newRandomName.JobArea(),
         };
-        userEditable.EmailChg = SupportMethods.Faker.Internet.Email(userEditable.FirstNameChg, userEditable.LastNameChg);
-        Result<ModifyResponse> ruu = asi.AdEngine.UserUpdate(userEditable);
+        userEditable.EmailChg = asi.Faker.Internet.Email(userEditable.FirstNameChg, userEditable.LastNameChg);
+        Result<ModifyResponse> ruu = asi.ADConnector.UserUpdate(userEditable);
 
         Assert.That(ruu.IsSuccess, Is.True, "C-100:  User update failed - " + ruu.ToStringWithLineFeeds());
 
 
         // E.  Re-read userFromAdRo to confirm Title change
-        Result<ADpUserFromAD_RO> updatedUser = asi.AdEngine.UserGetByDn(asi.UnitTestParent.Path, testUser.User.DistinquishedName, SearchScope.Subtree);
+        Result<ADpUserFromAD_RO> updatedUser = asi.ADConnector.UserGetByDn(asi.UnitTestParent.Path, testUser.User.DistinquishedName, SearchScope.Subtree);
         Assert.That(updatedUser.IsSuccess, Is.True, "E-100:  Failed to find TestUser --> AppError: " + foundUser.ToStringWithLineFeeds());
 
         // Z. Validate the changes
@@ -136,21 +142,20 @@ public class AD_User_Tests
     public void DeleteUser()
     {
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer();
 
         // Create a random userFromAdRo OU
         Result<ADSPath> newOuResult = asi.CreateRandomOu();
         Assert.That(newOuResult.IsSuccess, Is.True, "A-100: Unable to create the unique containing OU for this test.  Errors: " + newOuResult.ToStringWithLineFeeds());
 
         // Create Test User Basic
-        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, SupportMethods.Faker);
-        testUser.CreateUser(asi.AdEngine);
+        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, asi.Faker);
+        testUser.CreateUser(asi.ADConnector);
 
         // C.  Retrieve the User
 
         // Read the user back to ensure it was created
         ADpUserFromAD_RO?        userFromAD;
-        Result<ADpUserFromAD_RO> foundUser = asi.AdEngine.UserGetByDn(asi.UnitTestParent.Path, testUser.User.DistinquishedName, SearchScope.Subtree);
+        Result<ADpUserFromAD_RO> foundUser = asi.ADConnector.UserGetByDn(asi.UnitTestParent.Path, testUser.User.DistinquishedName, SearchScope.Subtree);
 
         Assert.That(foundUser.IsSuccess, Is.True, "C-100:  Failed to find TestUser --> AppError: " + foundUser.ToStringWithLineFeeds());
         userFromAD = foundUser.Value;
@@ -158,13 +163,13 @@ public class AD_User_Tests
 
         
         // D. Delete the User
-        Result<DeleteResponse> deleteResult = asi.AdEngine.UserDelete(userFromAD.DistinguishedName);
+        Result<DeleteResponse> deleteResult = asi.ADConnector.UserDelete(userFromAD.DistinguishedName);
         Assert.That(deleteResult.IsSuccess, Is.True, "D-100:  User delete failed - " + deleteResult.ToStringWithLineFeeds());
 
 
         // Z.  Validate
         ADpUserFromAD_RO?        notFoundUser;
-        Result<ADpUserFromAD_RO> foundResult = asi.AdEngine.UserGetByDn(asi.UnitTestParent.Path, testUser.User.DistinquishedName, SearchScope.Subtree);
+        Result<ADpUserFromAD_RO> foundResult = asi.ADConnector.UserGetByDn(asi.UnitTestParent.Path, testUser.User.DistinquishedName, SearchScope.Subtree);
 
         Assert.That(foundResult.IsSuccess, Is.False, "Z-100:  Found user after Deletion.  Deletion failed" );
     }
@@ -175,7 +180,6 @@ public class AD_User_Tests
     public void MoveUser()
     {
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer();
 
         // Create a random userFromAdRo OU
         Result<ADSPath> newOuResult = asi.CreateRandomOu();
@@ -189,8 +193,8 @@ public class AD_User_Tests
 
 
         // Create Test User Basic
-        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, SupportMethods.Faker);
-        testUser.CreateUser(asi.AdEngine);
+        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, asi.Faker);
+        testUser.CreateUser(asi.ADConnector);
 
 
         // B. Read the userFromAdRo back to verify successful creation
@@ -199,7 +203,7 @@ public class AD_User_Tests
         List<string> attributes = [];
         ADpUserFromAD_RO.AddInfoAttributes(attributes);
         ADpUserFromAD_RO.AddBaseAttributes(attributes);
-        Result<ADpUserFromAD_RO> foundUser = asi.AdEngine.UserFindSingleUser(newOuResult.Value.Path,
+        Result<ADpUserFromAD_RO> foundUser = asi.ADConnector.UserFindSingleUser(newOuResult.Value.Path,
                                                                         SearchScope.OneLevel,
                                                                         searchFilter,
                                                                         attributes);
@@ -210,13 +214,13 @@ public class AD_User_Tests
 
 
         // C. Move the User
-        Result<string> moveResult = asi.AdEngine.UserMove(userFromAdRoFromAd, moveToOuResult.Value.Path);
+        Result<string> moveResult = asi.ADConnector.UserMove(userFromAdRoFromAd, moveToOuResult.Value.Path);
         Assert.That(moveResult.IsSuccess, Is.True, "C-100:  User move failed - " + moveResult.ToStringWithLineFeeds());
         Console.WriteLine("Moving userFromAdRo to : " + moveToOuResult.Value.Path);
 
 
         // D .  Verify the userFromAdRo is Moved.  First confirm not in old location
-        foundUser = asi.AdEngine.UserFindSingleUser(newOuResult.Value.Path,
+        foundUser = asi.ADConnector.UserFindSingleUser(newOuResult.Value.Path,
                                                 SearchScope.OneLevel,
                                                 searchFilter,
                                                 attributes);
@@ -225,7 +229,7 @@ public class AD_User_Tests
 
 
         // E.  Now confirm the userFromAdRo is in the new location
-        foundUser = asi.AdEngine.UserFindSingleUser(moveToOuResult.Value.Path,
+        foundUser = asi.ADConnector.UserFindSingleUser(moveToOuResult.Value.Path,
                                                 SearchScope.OneLevel,
                                                 searchFilter,
                                                 attributes);
@@ -240,7 +244,6 @@ public class AD_User_Tests
     public void RenameUser()
     {
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer();
 
         // Create a random userFromAdRo OU
         Result<ADSPath> newOuResult = asi.CreateRandomOu();
@@ -248,8 +251,8 @@ public class AD_User_Tests
 
 
         // Create Test User Basic
-        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, SupportMethods.Faker);
-        testUser.CreateUser(asi.AdEngine);
+        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, asi.Faker);
+        testUser.CreateUser(asi.ADConnector);
 
 
         // B. Read the userFromAdRo back to verify successful creation
@@ -258,7 +261,7 @@ public class AD_User_Tests
         List<string> attributes = [];
         ADpUserFromAD_RO.AddInfoAttributes(attributes);
         ADpUserFromAD_RO.AddBaseAttributes(attributes);
-        Result<ADpUserFromAD_RO> foundUser = asi.AdEngine.UserFindSingleUser(newOuResult.Value.Path,
+        Result<ADpUserFromAD_RO> foundUser = asi.ADConnector.UserFindSingleUser(newOuResult.Value.Path,
                                                                         SearchScope.OneLevel,
                                                                         searchFilter,
                                                                         attributes);
@@ -269,13 +272,13 @@ public class AD_User_Tests
 
 
         // C. Rename the User
-        Result<string> renameResult = asi.AdEngine.UserRename(userFromAdRoFromAd, "xyz User");
+        Result<string> renameResult = asi.ADConnector.UserRename(userFromAdRoFromAd, "xyz User");
         Assert.That(renameResult.IsSuccess, Is.True, "C-100:  User rename failed - " + renameResult.ToStringWithLineFeeds());
         Console.WriteLine("Renamed userFromAdRo to : " + renameResult.Value);
 
 
         // D .  Verify the userFromAdRo is Moved.  First confirm not in old location
-        foundUser = asi.AdEngine.UserFindSingleUser(newOuResult.Value.Path,
+        foundUser = asi.ADConnector.UserFindSingleUser(newOuResult.Value.Path,
                                                 SearchScope.OneLevel,
                                                 searchFilter,
                                                 attributes);
@@ -292,15 +295,14 @@ public class AD_User_Tests
     public void FindSingleUser()
     {
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer();
 
         // Create a random user OU
         Result<ADSPath> newOuResult = asi.CreateRandomOu();
         Assert.That(newOuResult.IsSuccess, Is.True, "A-100: Unable to create the unique containing OU for this test.  Errors: " + newOuResult.ToStringWithLineFeeds());
 
         // Create Test User Basic
-        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, SupportMethods.Faker);
-        testUser.CreateUser(asi.AdEngine);
+        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, asi.Faker);
+        testUser.CreateUser(asi.ADConnector);
 
 
         // Part 2
@@ -312,7 +314,7 @@ public class AD_User_Tests
         ADpUserFromAD_RO.AddPasswordAttributes(attributes);
 
         string searchFilter = "(&(objectClass=user)(objectCategory=person))";
-        Result<ADpUserFromAD_RO> foundUser = asi.AdEngine.UserFindSingleUser(newOuResult.Value.Path,
+        Result<ADpUserFromAD_RO> foundUser = asi.ADConnector.UserFindSingleUser(newOuResult.Value.Path,
                                                                         SearchScope.OneLevel,
                                                                         searchFilter,
                                                                         attributes);
@@ -332,16 +334,15 @@ public class AD_User_Tests
     public void UserGetByCommonName()
     {
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer();
 
         // Create Test User Basic
-        TstUserBasic testUser = new("TestBasicUser Creation", asi.UnitTestParent, SupportMethods.Faker);
-        testUser.CreateUser(asi.AdEngine);
+        TstUserBasic testUser = new("TestBasicUser Creation", asi.UnitTestParent, asi.Faker);
+        testUser.CreateUser(asi.ADConnector);
 
 
         // Part Z
         ADpUserFromAD_RO? userFromAD;
-        Result<ADpUserFromAD_RO> foundUser = asi.AdEngine.UserGetByCn(asi.UnitTestParent.Path, testUser.User.CommonNameChg, SearchScope.OneLevel);
+        Result<ADpUserFromAD_RO> foundUser = asi.ADConnector.UserGetByCn(asi.UnitTestParent.Path, testUser.User.CommonNameChg, SearchScope.OneLevel);
 
         Assert.That(foundUser.IsSuccess, Is.True, "Z-100:  Failed to find TestUser --> AppError: " + foundUser.ToStringWithLineFeeds());
         userFromAD = foundUser.Value;
@@ -363,11 +364,10 @@ public class AD_User_Tests
     public void UserGetByAttribute(string attributeToRetrieveBy)
     {
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer();
 
         // Create Test User Basic
-        TstUserBasic testUser = new("TestBasicUser Creation", asi.UnitTestParent, SupportMethods.Faker);
-        testUser.CreateUser(asi.AdEngine);
+        TstUserBasic testUser = new("TestBasicUser Creation", asi.UnitTestParent, asi.Faker);
+        testUser.CreateUser(asi.ADConnector);
 
 
         // Part Z
@@ -378,22 +378,22 @@ public class AD_User_Tests
         if (attributeToRetrieveBy == "UPN")
         {
             attributeValue = testUser.User.UPN;
-            foundUser = asi.AdEngine.UserGetByUPN(asi.UnitTestParent.Path, attributeValue, SearchScope.OneLevel);
+            foundUser = asi.ADConnector.UserGetByUPN(asi.UnitTestParent.Path, attributeValue, SearchScope.OneLevel);
         }
         else if (attributeToRetrieveBy == "CN")
         {
             attributeValue = testUser.User.CommonNameChg;
-            foundUser = asi.AdEngine.UserGetByCn(asi.UnitTestParent.Path, attributeValue, SearchScope.OneLevel);
+            foundUser = asi.ADConnector.UserGetByCn(asi.UnitTestParent.Path, attributeValue, SearchScope.OneLevel);
         }
         else if (attributeToRetrieveBy == "DN")
         {
             attributeValue = testUser.User.DistinquishedName;
-            foundUser = asi.AdEngine.UserGetByDn(asi.UnitTestParent.Path, attributeValue, SearchScope.OneLevel);
+            foundUser = asi.ADConnector.UserGetByDn(asi.UnitTestParent.Path, attributeValue, SearchScope.OneLevel);
         }
         else if (attributeToRetrieveBy == "SAM")
         {
             attributeValue = testUser.User.SAMAccount;
-            foundUser = asi.AdEngine.UserGetBySAMAccount(asi.UnitTestParent.Path, attributeValue, SearchScope.OneLevel);
+            foundUser = asi.ADConnector.UserGetBySAMAccount(asi.UnitTestParent.Path, attributeValue, SearchScope.OneLevel);
         }
 
 
@@ -414,21 +414,20 @@ public class AD_User_Tests
     public void FindMultipleUsers()
     {
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer();
-
+ 
         // Create a random user OU
         Result<ADSPath> newOuResult = asi.CreateRandomOu();
         Assert.That(newOuResult.IsSuccess, Is.True, "A-100: Unable to create the unique containing OU for this test.  Errors: " + newOuResult.ToStringWithLineFeeds());
 
         // Create Test User Basic
-        TstUserBasic testUser = new("TestMultiple User 1", newOuResult.Value, SupportMethods.Faker);
-        testUser.CreateUser(asi.AdEngine);
+        TstUserBasic testUser = new("TestMultiple User 1", newOuResult.Value, asi.Faker);
+        testUser.CreateUser(asi.ADConnector);
 
-        TstUserBasic testUser2 = new("TestMultiple User 2", newOuResult.Value, SupportMethods.Faker);
-        testUser2.CreateUser(asi.AdEngine);
+        TstUserBasic testUser2 = new("TestMultiple User 2", newOuResult.Value, asi.Faker);
+        testUser2.CreateUser(asi.ADConnector);
 
-        TstUserBasic testUser3 = new("TestMultiple User 3", newOuResult.Value, SupportMethods.Faker);
-        testUser3.CreateUser(asi.AdEngine);
+        TstUserBasic testUser3 = new("TestMultiple User 3", newOuResult.Value, asi.Faker);
+        testUser3.CreateUser(asi.ADConnector);
 
 
         // Part 2
@@ -440,7 +439,7 @@ public class AD_User_Tests
         ADpUserFromAD_RO.AddPasswordAttributes(attributes);
 
         string searchFilter = "(&(objectClass=user)(objectCategory=person))";
-        Result<List<ADpUserFromAD_RO>> resultUsers = asi.AdEngine.UserFindOneOrMore(newOuResult.Value.Path,
+        Result<List<ADpUserFromAD_RO>> resultUsers = asi.ADConnector.UserFindOneOrMore(newOuResult.Value.Path,
                                                                                SearchScope.OneLevel,
                                                                                searchFilter,
                                                                                attributes);
@@ -461,23 +460,22 @@ public class AD_User_Tests
     public void UserAddWithAttributes2()
     {
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer();
-
+  
         // B.  More Setup
         // Create a random user OU
         Result<ADSPath> newOuResult = asi.CreateRandomOu(asi.UnitTestParent);
         Assert.That(newOuResult.IsSuccess, Is.True, "A-100: Unable to create the unique containing OU for this test.  Errors: " + newOuResult.ToStringErrorOnly());
 
         // Create Test User Basic
-        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, SupportMethods.Faker);
-        testUser.CreateUser(asi.AdEngine);
+        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, asi.Faker);
+        testUser.CreateUser(asi.ADConnector);
 
 
         // C.  Retrieve the User
 
         // Read the user back to ensure it was created
         ADpUserFromAD_RO?        userFromAD;
-        Result<ADpUserFromAD_RO> foundUser = asi.AdEngine.UserGetByDn(asi.UnitTestParent.Path, testUser.User.DistinquishedName, SearchScope.Subtree);
+        Result<ADpUserFromAD_RO> foundUser = asi.ADConnector.UserGetByDn(asi.UnitTestParent.Path, testUser.User.DistinquishedName, SearchScope.Subtree);
 
         Assert.That(foundUser.IsSuccess, Is.True, "C-100:  Failed to find TestUser --> AppError: " + foundUser.ToStringWithLineFeeds());
         userFromAD = foundUser.Value;
@@ -497,8 +495,7 @@ public class AD_User_Tests
     public void SetUserEnablement(bool enabledStatus)
     {
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer();
-
+  
 
         // Create a random user OU
         Result<ADSPath> newOuResult = asi.CreateRandomOu(asi.UnitTestParent);
@@ -506,16 +503,16 @@ public class AD_User_Tests
 
 
         // B.  Create Test User Basic
-        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, SupportMethods.Faker);
+        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, asi.Faker);
         testUser.User.IsDisabled = enabledStatus;
-        testUser.CreateUser(asi.AdEngine);
+        testUser.CreateUser(asi.ADConnector);
 
         List<string> attributesToRetrieve = new();
         ADpUserFromAD_RO.AddAllAttributes(attributesToRetrieve);
 
 
         // C.  Retrieve created user
-        Result<ADpUserFromAD_RO> getUserResult = asi.AdEngine.UserGetByDn(newOuResult.Value.Path, testUser.User.DistinquishedName, searchScope: SearchScope.Subtree, attributesToRetrieve);
+        Result<ADpUserFromAD_RO> getUserResult = asi.ADConnector.UserGetByDn(newOuResult.Value.Path, testUser.User.DistinquishedName, searchScope: SearchScope.Subtree, attributesToRetrieve);
         Assert.That(getUserResult.IsSuccess, Is.True, "C-100:");
         Assert.That(getUserResult.Value, Is.Not.Null, "C-200:");
         ADpUserFromAD_RO userFromAD = getUserResult.Value;
@@ -536,7 +533,6 @@ public class AD_User_Tests
     public void SetUserPasswordNeverExpires(bool enabledStatus)
     {
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer();
 
 
         // Create a random user OU
@@ -545,16 +541,16 @@ public class AD_User_Tests
 
 
         // B.  Create Test User Basic
-        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, SupportMethods.Faker);
+        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, asi.Faker);
         testUser.User.IsPasswordSetToNeverExpires = enabledStatus;
-        testUser.CreateUser(asi.AdEngine);
+        testUser.CreateUser(asi.ADConnector);
 
         List<string> attributesToRetrieve = new();
         ADpUserFromAD_RO.AddAllAttributes(attributesToRetrieve);
 
 
         // C.  Retrieve created user
-        Result<ADpUserFromAD_RO> getUserResult = asi.AdEngine.UserGetByDn(newOuResult.Value.Path,
+        Result<ADpUserFromAD_RO> getUserResult = asi.ADConnector.UserGetByDn(newOuResult.Value.Path,
                                                                           testUser.User.DistinquishedName,
                                                                           searchScope: SearchScope.Subtree,
                                                                           attributesToRetrieve);
@@ -576,20 +572,19 @@ public class AD_User_Tests
     public void UserUpdate()
     {
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer();
-
+ 
         // B.  More setup
         // Create a random user OU
         Result<ADSPath> newOuResult = asi.CreateRandomOu();
         Assert.That(newOuResult.IsSuccess, Is.True, "A-100: Unable to create the unique containing OU for this test.  Errors: " + newOuResult.ToStringWithLineFeeds());
 
         // C.  Create Test User Basic
-        TstUserBasic testUser = new("Update User Test", newOuResult.Value, SupportMethods.Faker);
-        testUser.CreateUser(asi.AdEngine);
+        TstUserBasic testUser = new("Update User Test", newOuResult.Value, asi.Faker);
+        testUser.CreateUser(asi.ADConnector);
 
         // Read the user back to ensure it was created
         ADpUserFromAD_RO?        userFromAD;
-        Result<ADpUserFromAD_RO> foundUser = asi.AdEngine.UserGetByDn(asi.UnitTestParent.Path, testUser.User.DistinquishedName, SearchScope.Subtree);
+        Result<ADpUserFromAD_RO> foundUser = asi.ADConnector.UserGetByDn(asi.UnitTestParent.Path, testUser.User.DistinquishedName, SearchScope.Subtree);
 
         Assert.That(foundUser.IsSuccess, Is.True, "C-100:  Failed to find TestUser --> AppError: " + foundUser.ToStringWithLineFeeds());
         userFromAD = foundUser.Value;
@@ -600,11 +595,11 @@ public class AD_User_Tests
         //AttributeBase[] attributesToUpdate = new AttributeBase[20];
 
         // Change their Email, Title and work phone. Generate a new person to get a unique email
-        AttrEmail chgEmail = new(SupportMethods.Faker.Internet.Email(), EnumAttributeOperation.Modify);
-        AttrTitle chgTitle = new(SupportMethods.Faker.Name.JobTitle(), EnumAttributeOperation.Modify);
-        AttrWorkPhone chgWorkPhone = new(SupportMethods.Faker.Phone.PhoneNumber(), EnumAttributeOperation.Modify);
+        AttrEmail chgEmail = new(asi.Faker.Internet.Email(), EnumAttributeOperation.Modify);
+        AttrTitle chgTitle = new(asi.Faker.Name.JobTitle(), EnumAttributeOperation.Modify);
+        AttrWorkPhone chgWorkPhone = new(asi.Faker.Phone.PhoneNumber(), EnumAttributeOperation.Modify);
 
-        Result<ModifyResponse> modifyResult = asi.AdEngine.UserUpdate(userFromAD!.DistinguishedName,
+        Result<ModifyResponse> modifyResult = asi.ADConnector.UserUpdate(userFromAD!.DistinguishedName,
                                                                   [
                                                                       chgEmail, chgTitle, chgWorkPhone
                                                                   ]);
@@ -613,7 +608,7 @@ public class AD_User_Tests
 
         // Z.  Validate the changes.
         ADpUserFromAD_RO? changedUserFromAD = null;
-        Result<SearchResponse> changeResponse = testUser.ExecuteSearch(asi.AdEngine, newOuResult.Value);
+        Result<SearchResponse> changeResponse = testUser.ExecuteSearch(asi.ADConnector, newOuResult.Value);
 
         SearchResponse srChange = changeResponse.Value;
         Console.WriteLine("Found {0} users matching criteria", srChange.Entries.Count);

@@ -1,4 +1,5 @@
-﻿using SlugEnt.AD.Protocols;
+﻿using Bogus;
+using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
 using SlugEnt.IS;
 using UT.SupportObjects;
@@ -12,30 +13,69 @@ namespace UT.CustomSupportObjects;
 /// </summary>
 public class Ad_SupportInitializer
 {
-    public const string MASTER_AD_UNIT_TEST_ROOT = "zUnitTesting";
+    private static Faker? _faker                   = new();
+    public const   string MASTER_AD_UNIT_TEST_ROOT = "zUnitTesting";
 
     public static Ad_SupportInitializer GetInitializer(bool isGroup = false)
     {
         Ad_SupportInitializer initializer = new();
         return initializer;
     }
+
+
+    private bool _isGroup = false;
+    
     private Ad_SupportInitializer(bool isGroup = false)
     {
-        SupportMethods = new();
-        AdEngine       = new(null);
-        UnitTestRoot   = AdEngine.DomainRoot.NewChildADSPath("ou=" + MASTER_AD_UNIT_TEST_ROOT);
-        if (!isGroup) 
+        ActiveDirConfig = new ActiveDirConfig()
+        {
+            AdPassword  = "T#sting2026",
+            AdUser      = "UTAdmin",
+            Domain      = "ycy4y.local",
+            Server1Name = "ycdc1",
+            Server2Name = "",
+            Port        = 636,
+            RootPath    = "",
+            UserOu      = ""
+        };
+
+        _isGroup = isGroup;
+    }
+
+    /// <summary>
+    /// Completes Setup of the AD Connector
+    /// </summary>
+    /// <returns></returns>
+    public bool Initialize()
+    {
+        ADConnector       = new(null);
+        ADConnector.Initialize(ActiveDirConfig);
+        Assert.That(ADConnector.IsConnected, Is.True, "[Ad_SupportInitializer_010");
+
+        UnitTestRoot   = ADConnector.DomainRoot.NewChildADSPath("ou=" + MASTER_AD_UNIT_TEST_ROOT);
+        if (!_isGroup)
             UnitTestParent = UnitTestRoot.NewChildADSPath("ou=" + HelperMethods.UTBASE);
         else
             UnitTestParent = UnitTestRoot.NewChildADSPath("ou=" + HelperMethods.OU_UTGROUP);
 
+        return true;
     }
 
-    public SupportMethods Sm { get => SupportMethods;}
 
-    public SupportMethods SupportMethods { get; private set; }
+    //
+    
+    public ActiveDirConfig ActiveDirConfig { get; private set; }
 
-    public ActiveDirectoryConnector  AdEngine { get; private set; }
+
+    public ActiveDirectoryConnector  ADConnector { get; private set; }
+
+
+    /// <summary>
+    ///     Returns the faker instance
+    /// </summary>
+    public Faker Faker => _faker!;
+
+
 
     public ADSPath UnitTestParent { get; private set; }
 
@@ -58,12 +98,12 @@ public class Ad_SupportInitializer
         {
             while (true)
             {
-                string newOuName = SupportMethods.Faker.Random.Word();
+                string newOuName = Faker.Random.Word();
                 // Since word is really words, we need to remove bogus characters
                 newOuName = newOuName.Replace("&", string.Empty);
 
                 // Now  add OU to LDAP
-                addResult =  AdEngine.OuCreate(newOuName, parentPath);
+                addResult =  ADConnector.OuCreate(newOuName, parentPath);
                 if (addResult.IsSuccess)
                 {
                     return Result.Ok(parentPath.NewChildADSPath("ou=" + newOuName));
@@ -86,4 +126,30 @@ public class Ad_SupportInitializer
             return Result.Fail(new ExceptionalError(e));
         }
     }
+
+
+
+    /// <summary>
+    /// Converts the Active Directory Configuration Domain value which is in domain.com format to LDAP style (dc=domain,dc=com)
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    public string DomainInLDAPStyle()
+    {
+        string domain = ActiveDirConfig?.Domain ?? "";
+        if (domain == "")
+            throw new ArgumentNullException("Domain", "Domain is not set in the Active Directory Configuration");
+
+        string[] domainParts = domain.Split('.');
+        string   ldapStyle   = "";
+        foreach (string domainPart in domainParts)
+        {
+            if (ldapStyle != "")
+                ldapStyle += ",";
+            ldapStyle += "dc=" + domainPart;
+        }
+
+        return ldapStyle;
+    }
+
 }

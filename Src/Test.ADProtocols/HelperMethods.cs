@@ -20,11 +20,9 @@ public static class HelperMethods
     /// <summary>
     /// Returns the UT Base Path used for most of testing.
     /// </summary>
-    /// <param name="sm"></param>
     /// <param name="domainRootPath"></param>
     /// <returns></returns>
-    public static ADSPath GetUT_BasePath(SupportMethods sm,
-                                        ADSPath domainRootPath)
+    public static ADSPath GetUT_BasePath(ADSPath domainRootPath)
     {
         ADSPath path = domainRootPath.NewChildADSPath(TESTBASE);
         ADSPath ut = path.NewChildADSPath(OU_UTBASE);
@@ -36,11 +34,9 @@ public static class HelperMethods
     /// <summary>
     /// Returns the UT Base Path used for most of testing.
     /// </summary>
-    /// <param name="sm"></param>
     /// <param name="domainRootPath"></param>
     /// <returns></returns>
-    public static ADSPath GetUT_GroupBasePath(SupportMethods sm,
-                                              ADSPath domainRootPath)
+    public static ADSPath GetUT_GroupBasePath(ADSPath domainRootPath)
     {
         return domainRootPath.NewChildADSPath(OU_UTGROUP);
     }

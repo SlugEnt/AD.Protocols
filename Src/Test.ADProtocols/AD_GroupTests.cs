@@ -16,14 +16,21 @@ public class AD_GroupTests
 {
 #pragma warning disable IDE0079
 #pragma warning disable NUnit2045
+
+    private Ad_SupportInitializer asi;
+
+    [SetUp]
+    public void Setup()
+    {
+        asi = Ad_SupportInitializer.GetInitializer();
+        asi.Initialize();
+    }
+
+    
     [Test]
     public void FindGroup ()
     {
-        throw new NotImplementedException();
-
-
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer(true);
 
         string searchFilter = ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS;
         List<string> attributes = [];
@@ -33,11 +40,34 @@ public class AD_GroupTests
         ADpReadOnlyGroup.AddMemberAttribute(attributes);
         
         ADSPath grp =asi.UnitTestParent;
-        Result<ADpReadOnlyGroup> resultF = asi.AdEngine.GroupFindSingle("OU=Temp,OU=UT_Groups,DC=ycy4y,DC=local",
+        Result<ADpReadOnlyGroup> resultF = asi.ADConnector.GroupFindSingle("OU=Temp,OU=UT_Groups,DC=ycy4y,DC=local",
                                                                         SearchScope.OneLevel,
                                                                         searchFilter,
                                                                         attributes);
         Assert.That(resultF.IsSuccess, Is.True, "Z-100:  Failed to find Group --> AppError: " + resultF.ToStringWithLineFeeds());
+        //ADpReadOnlyGroup group = resultF.Value;
+    }
+
+
+    [Test]
+    public void FindGroups()
+    {
+        // A --> Setup
+        //throw new NotImplementedException();
+        string       searchFilter = ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS;
+        List<string> attributes   = [];
+        ADpReadOnlyGroup.AddBaseAttributes(attributes);
+        ADpReadOnlyGroup.AddInfoAttributes(attributes);
+        ADpReadOnlyGroup.AddStatisticAttributes(attributes);
+        ADpReadOnlyGroup.AddMemberAttribute(attributes);
+
+        ADSPath grp = asi.UnitTestParent;
+        Result<List<ADpReadOnlyGroup>> resultF = asi.ADConnector.GroupFindOneOrMore("OU=UT_Groups,DC=ycy4y,DC=local",
+                                                                           SearchScope.OneLevel,
+                                                                           searchFilter,
+                                                                           attributes);
+        Assert.That(resultF.IsSuccess, Is.True, "Z-100:  Failed to find Group --> AppError: " + resultF.ToStringWithLineFeeds());
+
         //ADpReadOnlyGroup group = resultF.Value;
     }
 
@@ -55,7 +85,6 @@ public class AD_GroupTests
     public void GroupAdd(EnumGroupType groupType)
     {
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer(true);
 
         // Create a random group OU
         Result<ADSPath> newOuResult = asi.CreateRandomOu(asi.UnitTestParent);
@@ -65,17 +94,17 @@ public class AD_GroupTests
 
 
         // Create Test Group
-        string          groupName = SupportMethods.Faker.Commerce.ProductName();
+        string          groupName = asi.Faker.Commerce.ProductName();
         ADpGroupUpdater testGroup = new(groupName,groupType);
 
         HelperMethods.DisplayGroup(testGroup);
 
-        Result resultA =  asi.AdEngine.GroupAdd(newOuResult.Value.Path, testGroup);
+        Result resultA =  asi.ADConnector.GroupAdd(newOuResult.Value.Path, testGroup);
         Assert.That(resultA.IsSuccess,Is.True,"A-120: Failed to add group.  Errors: " + resultA.ToStringWithLineFeeds());
 
 
         // B. --> Verify Group was created
-        Result<ADpReadOnlyGroup> resultB = ReadAndVerifyGroup(asi.AdEngine,
+        Result<ADpReadOnlyGroup> resultB = ReadAndVerifyGroup(asi.ADConnector,
                                                               newOuResult.Value.Path,
                                                               [],
                                                               ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS);
@@ -95,7 +124,6 @@ public class AD_GroupTests
     public void GroupUpdate()
     {
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer(true);
 
 
         // Create a random group OU
@@ -105,19 +133,19 @@ public class AD_GroupTests
 
 
         // Create Test Group
-        string          groupName = SupportMethods.Faker.Commerce.ProductName();
+        string          groupName = asi.Faker.Commerce.ProductName();
         int             i         = Random.Shared.Next(1, 6);
         int             j         = i * 5;
         ADpGroupUpdater testGroup = new(groupName, (EnumGroupType)j);
 
         HelperMethods.DisplayGroup(testGroup);
 
-        Result resultA = asi.AdEngine.GroupAdd(newOuResult.Value.Path, testGroup);
+        Result resultA = asi.ADConnector.GroupAdd(newOuResult.Value.Path, testGroup);
         Assert.That(resultA.IsSuccess, Is.True, "A-100: Failed to add group.  Errors: " + resultA.ToStringWithLineFeeds());
 
 
         // B.  Validate the group was created
-        Result<ADpReadOnlyGroup> resultB = ReadAndVerifyGroup(asi.AdEngine,
+        Result<ADpReadOnlyGroup> resultB = ReadAndVerifyGroup(asi.ADConnector,
                                                               newOuResult.Value.Path,
                                                               [],
                                                               ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS);
@@ -127,15 +155,15 @@ public class AD_GroupTests
         // C. Update the group.
         ADpGroupUpdater group2 = new(group)
         {
-            DisplayNameChg = "Updated " + SupportMethods.Faker.Commerce.ProductName(),
+            DisplayNameChg = "Updated " + asi.Faker.Commerce.ProductName(),
             SAMAccountChg = "Upd" + group.SAMAccount,
             DescriptionChg = "Newly minted Description"
         };
-        asi.AdEngine.GroupUpdate(group2);
+        asi.ADConnector.GroupUpdate(group2);
 
 
         // D.  Re-read the group
-        resultB = ReadAndVerifyGroup(asi.AdEngine,
+        resultB = ReadAndVerifyGroup(asi.ADConnector,
                                      newOuResult.Value.Path,
                                      [],
                                      ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS);
@@ -154,7 +182,6 @@ public class AD_GroupTests
     public void DeleteGroup()
     {
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer(true);
 
 
         // Create a random user OU
@@ -163,18 +190,18 @@ public class AD_GroupTests
 
         // C.  Act
         // Create Test Group
-        string          groupName = SupportMethods.Faker.Commerce.ProductName();
+        string          groupName = asi.Faker.Commerce.ProductName();
         int             i         = Random.Shared.Next(1, 6)*5;
         ADpGroupUpdater testGroup = new(groupName, (EnumGroupType)i);
 
         HelperMethods.DisplayGroup(testGroup);
 
-        Result resultA = asi.AdEngine.GroupAdd(newOuResult.Value.Path, testGroup);
+        Result resultA = asi.ADConnector.GroupAdd(newOuResult.Value.Path, testGroup);
         Assert.That(resultA.IsSuccess, Is.True, "C-200: Failed to create group.  Errors: " + resultA.ToStringWithLineFeeds());
 
 
         // B.  Validate the group was created
-        Result<ADpReadOnlyGroup> resultB = ReadAndVerifyGroup(asi.AdEngine,
+        Result<ADpReadOnlyGroup> resultB = ReadAndVerifyGroup(asi.ADConnector,
                                                               newOuResult.Value.Path,
                                                               [],
                                                               ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS);
@@ -182,12 +209,12 @@ public class AD_GroupTests
 
 
         // C. Delete the group
-        Result<DeleteResponse> deleteResult = asi.AdEngine.GroupDelete(group.DistinguishedName);
+        Result<DeleteResponse> deleteResult = asi.ADConnector.GroupDelete(group.DistinguishedName);
         Assert.That(deleteResult.IsSuccess, Is.True, "C-100:  Group delete failed - " + deleteResult.ToStringWithLineFeeds());
 
 
         // D .  Verify the user is deleted
-        resultB = ReadAndVerifyGroup(asi.AdEngine,
+        resultB = ReadAndVerifyGroup(asi.ADConnector,
                                      newOuResult.Value.Path,
                                      [],
                                      ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS, true);
@@ -203,7 +230,6 @@ public class AD_GroupTests
     public void MoveGroup()
     {
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer(true);
 
         // Create a random OU
         Result<ADSPath> newOuResult = asi.CreateRandomOu();
@@ -217,17 +243,17 @@ public class AD_GroupTests
 
 
         // Create Test Group
-        string          groupName = SupportMethods.Faker.Commerce.ProductName();
+        string          groupName = asi.Faker.Commerce.ProductName();
         int             i         = Random.Shared.Next(1, 6)*5;
         ADpGroupUpdater testGroup = new(groupName, (EnumGroupType)i);
 
         HelperMethods.DisplayGroup(testGroup);
 
-        Result resultA = asi.AdEngine.GroupAdd(newOuResult.Value.Path, testGroup);
+        Result resultA = asi.ADConnector.GroupAdd(newOuResult.Value.Path, testGroup);
         Assert.That(resultA.IsSuccess, Is.True, "A-100: Failed to create group.  Errors: " + resultA.ToStringWithLineFeeds());
 
         // B.  Validate the group was created
-        Result<ADpReadOnlyGroup> resultB = ReadAndVerifyGroup(asi.AdEngine,
+        Result<ADpReadOnlyGroup> resultB = ReadAndVerifyGroup(asi.ADConnector,
                                                               newOuResult.Value.Path,
                                                               [],
                                                               ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS);
@@ -235,13 +261,13 @@ public class AD_GroupTests
 
 
         // C. Move the Group
-        Result<string> moveResult = asi.AdEngine.GroupMove(group, moveToOuResult.Value.Path);
+        Result<string> moveResult = asi.ADConnector.GroupMove(group, moveToOuResult.Value.Path);
         Assert.That(moveResult.IsSuccess, Is.True, "C-100:  Group move failed - " + moveResult.ToStringWithLineFeeds());
         Console.WriteLine("Moving group to : " + moveToOuResult.Value.Path);
 
 
         // D .  Verify the group was moved
-        resultB = ReadAndVerifyGroup(asi.AdEngine,
+        resultB = ReadAndVerifyGroup(asi.ADConnector,
                                      newOuResult.Value.Path,
                                      [],
                                      ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS,true);
@@ -251,7 +277,7 @@ public class AD_GroupTests
 
 
         // E.  Now confirm the group is in the new location
-        resultB = ReadAndVerifyGroup(asi.AdEngine,
+        resultB = ReadAndVerifyGroup(asi.ADConnector,
                                      moveToOuResult.Value.Path,
                                      [],
                                      ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS);
@@ -265,7 +291,6 @@ public class AD_GroupTests
     public void RenameGroup()
     {
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer(true);
 
         // Create a random OU
         Result<ADSPath> newOuResult = asi.CreateRandomOu();
@@ -273,30 +298,30 @@ public class AD_GroupTests
 
 
         // Create Test Group
-        string          groupName = SupportMethods.Faker.Commerce.ProductName();
+        string          groupName = asi.Faker.Commerce.ProductName();
         int             i         = Random.Shared.Next(1, 6)*5;
         ADpGroupUpdater testGroup = new(groupName, (EnumGroupType)i);
 
         HelperMethods.DisplayGroup(testGroup);
 
-        Result resultA = asi.AdEngine.GroupAdd(newOuResult.Value.Path, testGroup);
+        Result resultA = asi.ADConnector.GroupAdd(newOuResult.Value.Path, testGroup);
         Assert.That(resultA.IsSuccess, Is.True, "A-100: Failed to create group.  Errors: " + resultA.ToStringWithLineFeeds());
 
 
         // B.  Validate the group was created
-        Result<ADpReadOnlyGroup> resultB = ReadAndVerifyGroup(asi.AdEngine, newOuResult.Value.Path, [], ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS);
+        Result<ADpReadOnlyGroup> resultB = ReadAndVerifyGroup(asi.ADConnector, newOuResult.Value.Path, [], ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS);
         ADpReadOnlyGroup group = resultB.Value;
 
 
         // C. Rename the Group
         string         newName      = group.AD_CommonName + "XY";
-        Result<string> renameResult = asi.AdEngine.GroupRename(group, newName);
+        Result<string> renameResult = asi.ADConnector.GroupRename(group, newName);
         Assert.That(renameResult.IsSuccess, Is.True, "C-100:  Group rename failed - " + renameResult.ToStringWithLineFeeds());
         Console.WriteLine("Renamed group to : " + renameResult.Value);
 
 
         // D .  Verify the group was renamed.  
-        resultB = ReadAndVerifyGroup(asi.AdEngine,
+        resultB = ReadAndVerifyGroup(asi.ADConnector,
                                      newOuResult.Value.Path,
                                      [],
                                      ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS);

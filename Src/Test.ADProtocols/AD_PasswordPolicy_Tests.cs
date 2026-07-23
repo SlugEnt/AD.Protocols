@@ -21,6 +21,16 @@ public class AD_PasswordPolicy_Tests
     public string _testPolicyPrefix = "__";
 
 
+    private Ad_SupportInitializer asi;
+
+
+    [SetUp]
+    public void Setup()
+    {
+        asi = Ad_SupportInitializer.GetInitializer();
+        asi.Initialize();
+    }
+
     /// <summary>
     /// Called before and after the start of all tests and end of all tests, to remove any password policies created during unit tests.
     /// </summary>
@@ -29,22 +39,24 @@ public class AD_PasswordPolicy_Tests
     public void Delete_Cleanup()
     {
         // Remove any test Password Policies that may have been created during the tests.
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer(true);
-
+        Ad_SupportInitializer tempAsi = Ad_SupportInitializer.GetInitializer();
+        tempAsi.Initialize();
+        
         // Get list of policies
-        Result<List<ADpReadOnlyPasswordPolicy>> result = asi.AdEngine.PasswordPolicyFindOneOrMore(_testPolicyPrefix);
+        Result<List<ADpReadOnlyPasswordPolicy>> result = tempAsi.ADConnector.PasswordPolicyFindOneOrMore(_testPolicyPrefix);
         if (!result.IsSuccess)
             if (result.ReasonCode != EnumReasonCode.NotFound)
                 Assert.That(result.IsSuccess,Is.True,$"OneTime: Unexpected error during OneTime Setup/Teardown.  {result.ToStringErrorOnly()} ");
 
-        // Delete them.
+        // None found.  Nothing to do.
         if (!result.IsSuccess)
             return;
 
+        // Delete them.
         foreach (ADpReadOnlyPasswordPolicy aDpReadOnlyPasswordPolicy in result.Value)
         {
-            Result deleteResult =  asi.AdEngine.PasswordPolicyDelete(aDpReadOnlyPasswordPolicy.DistinguishedName);
-            Assert.That(deleteResult.IsSuccess,Is.True,$"OneTime:  Failed to delete policy: {aDpReadOnlyPasswordPolicy.DistinguishedName}");
+            Result deleteResult =  tempAsi.ADConnector.PasswordPolicyDelete(aDpReadOnlyPasswordPolicy.DistinguishedName);
+            Assert.That(deleteResult.IsSuccess,Is.True,$"OneTime:  Failed to delete policy: {aDpReadOnlyPasswordPolicy.DistinguishedName}.  {deleteResult.ToStringForPrint()}");
         }
     }
 
@@ -55,27 +67,27 @@ public class AD_PasswordPolicy_Tests
     public void FindPasswordPolicy()
     {
         // A --> Setup
-        Ad_SupportInitializer asi      = Ad_SupportInitializer.GetInitializer(true);
-        ADSPath               policyOu = asi.AdEngine.GetPasswordPolicyOU();
+        
+        ADSPath               policyOu = asi.ADConnector.GetPasswordPolicyOU();
 
 
         // B. Create some policies
         // B1. 
         string                   methodPrefix = _testPolicyPrefix + "find_";
-        string policyName = methodPrefix + SupportMethods.Faker.Commerce.ProductName();
+        string policyName = methodPrefix + asi.Faker.Commerce.ProductName();
         ADpPasswordPolicyUpdater testPolicy   = CreateTestPasswordPolicy(policyName);
 //        testPolicy.NameChg = namePrefix + testPolicy.NameChg;
-        Result                   resultB    = asi.AdEngine.PasswordPolicyAdd(testPolicy);
+        Result                   resultB    = asi.ADConnector.PasswordPolicyAdd(testPolicy);
         Assert.That(resultB.IsSuccess, Is.True, "B-120: Failed to add Password Policy.  Errors: " + resultB.ToStringErrorOnly());
 
         // B2. 
         testPolicy.NameChg = testPolicy.NameChg + "2";
-        resultB = asi.AdEngine.PasswordPolicyAdd(testPolicy);
+        resultB = asi.ADConnector.PasswordPolicyAdd(testPolicy);
         Assert.That(resultB.IsSuccess, Is.True, "B-130: Failed to add Password Policy.  Errors: " + resultB.ToStringErrorOnly());
 
         // B3. 
         testPolicy.NameChg = testPolicy.NameChg + "3";
-        resultB            = asi.AdEngine.PasswordPolicyAdd(testPolicy);
+        resultB            = asi.ADConnector.PasswordPolicyAdd(testPolicy);
         Assert.That(resultB.IsSuccess, Is.True, "B-140: Failed to add Password Policy.  Errors: " + resultB.ToStringErrorOnly());
         
 
@@ -83,7 +95,7 @@ public class AD_PasswordPolicy_Tests
         List<string> attributes   = [];
         ADpReadOnlyPasswordPolicy.AddBaseAttributes(attributes);
 
-        Result<List<ADpReadOnlyPasswordPolicy>> resultF = asi.AdEngine.PasswordPolicyFindOneOrMore(policyName);
+        Result<List<ADpReadOnlyPasswordPolicy>> resultF = asi.ADConnector.PasswordPolicyFindOneOrMore(policyName);
         Assert.That(resultF.IsSuccess, Is.True, "Z-100:  Failed to find Password Policy --> AppError: " + resultF.ToStringErrorOnly());
         Assert.That(resultF.Value.Count, Is.EqualTo(3),"Z-120");
     }
@@ -94,20 +106,19 @@ public class AD_PasswordPolicy_Tests
     public void UpdatePasswordPolicy()
     {
         // A --> Setup
-        Ad_SupportInitializer asi          = Ad_SupportInitializer.GetInitializer(true);
-        ADSPath               policyOu     = asi.AdEngine.GetPasswordPolicyOU();
+        ADSPath               policyOu     = asi.ADConnector.GetPasswordPolicyOU();
         string                methodPrefix = _testPolicyPrefix + "update_";
-        string                policyName   = methodPrefix + SupportMethods.Faker.Commerce.ProductName();
+        string                policyName   = methodPrefix + asi.Faker.Commerce.ProductName();
 
 
         // B.  More Setup
         ADpPasswordPolicyUpdater testPolicy = CreateTestPasswordPolicy(policyName);
-        Result resultB = asi.AdEngine.PasswordPolicyAdd(testPolicy);
+        Result resultB = asi.ADConnector.PasswordPolicyAdd(testPolicy);
         Assert.That(resultB.IsSuccess, Is.True, "B-120: Failed to add Password Policy.  Errors: " + resultB.ToStringErrorOnly());
 
 
         // C. --> Verify Policy was created
-        Result<ADpReadOnlyPasswordPolicy> resultC = ReadAndVerifyPasswordPolicy(asi.AdEngine,
+        Result<ADpReadOnlyPasswordPolicy> resultC = ReadAndVerifyPasswordPolicy(asi.ADConnector,
                                                                                 [],
                                                                                 testPolicy.NameChg);
         Assert.That(resultC.IsSuccess, Is.True, "C-100:  Failed to find Password Policy --> AppError: " + resultC.ToStringErrorOnly());
@@ -120,8 +131,8 @@ public class AD_PasswordPolicy_Tests
 
 
         // E.  Update some fields
-        currentPolicy.DisplayNameChg    = "Updated " + SupportMethods.Faker.Commerce.ProductName();
-        currentPolicy.DescriptionChg    = "Updated " + SupportMethods.Faker.Lorem.Sentence(5);
+        currentPolicy.DisplayNameChg    = "Updated " + asi.Faker.Commerce.ProductName();
+        currentPolicy.DescriptionChg    = "Updated " + asi.Faker.Lorem.Sentence(5);
         currentPolicy.HistoryCount = 46;
 
         currentPolicy.MaximumAge = new TimeSpan(116,
@@ -134,7 +145,7 @@ public class AD_PasswordPolicy_Tests
                                                 0);
         currentPolicy.LockOutThreshold = 13;
         currentPolicy.MinimumLength    = 17;
-        currentPolicy.AppliesTo.Add($"CN=Domain Guests,CN=Users,{SupportMethods.DomainInLDAPStyle()}");
+        currentPolicy.AppliesTo.Add($"CN=Domain Users,CN=Users,{asi.DomainInLDAPStyle()}");
         currentPolicy.AppliesToSetFlag   = true; 
         currentPolicy.SettingsPrecedence = 19;
         currentPolicy.LockoutObservationWindow = new TimeSpan(0,
@@ -143,12 +154,12 @@ public class AD_PasswordPolicy_Tests
                                                               0);
 
         // M.  Update the Password Policy
-        Result<ModifyResponse> resultM = asi.AdEngine.PasswordPolicyUpdate(currentPolicy);
+        Result<ModifyResponse> resultM = asi.ADConnector.PasswordPolicyUpdate(currentPolicy);
         Assert.That(resultM.IsSuccess, Is.True, "M-100:  Failed to update Password Policy --> AppError: " + resultM.ToStringErrorOnly());
 
 
         // Z. Read it back and validate changes were made.
-        Result<ADpReadOnlyPasswordPolicy> resultZ = ReadAndVerifyPasswordPolicy(asi.AdEngine,
+        Result<ADpReadOnlyPasswordPolicy> resultZ = ReadAndVerifyPasswordPolicy(asi.ADConnector,
                                                                                 [],
                                                                                 policyName);
         Assert.That(resultZ.IsSuccess, Is.True, "C-100:  Failed to find Password Policy --> AppError: " + resultZ.ToStringErrorOnly());
@@ -182,17 +193,17 @@ public class AD_PasswordPolicy_Tests
     private ADpPasswordPolicyUpdater CreateTestPasswordPolicy(string policyName)
     {
         // Create a paassword policy
-        string policyDesc       = SupportMethods.Faker.Lorem.Sentence(5);
-        int    minAge           = SupportMethods.Faker.Random.Int(1, 60);
-        int    maxAge           = SupportMethods.Faker.Random.Int(minAge, 100);
-        int    minLength        = SupportMethods.Faker.Random.Int(9, 13);
-        int    lockoutThreshold = SupportMethods.Faker.Random.Int(3, 30);
-        int    history          = SupportMethods.Faker.Random.Int(7, 30);
-        bool   complexity       = SupportMethods.Faker.Random.Bool();
-        bool   encrypted        = SupportMethods.Faker.Random.Bool();
-        int    precedence       = SupportMethods.Faker.Random.Int(3, 22);
-        int    lockoutDuration  = SupportMethods.Faker.Random.Int(20, 6000); // in minutes
-        int    lockoutWindow    = SupportMethods.Faker.Random.Int(3, 600); // in minutes
+        string policyDesc       = asi.Faker.Lorem.Sentence(5);
+        int    minAge           = asi.Faker.Random.Int(1, 60);
+        int    maxAge           = asi.Faker.Random.Int(minAge, 100);
+        int    minLength        = asi.Faker.Random.Int(9, 13);
+        int    lockoutThreshold = asi.Faker.Random.Int(3, 30);
+        int    history          = asi.Faker.Random.Int(7, 30);
+        bool   complexity       = asi.Faker.Random.Bool();
+        bool   encrypted        = asi.Faker.Random.Bool();
+        int    precedence       = asi.Faker.Random.Int(3, 22);
+        int    lockoutDuration  = asi.Faker.Random.Int(20, 6000); // in minutes
+        int    lockoutWindow    = asi.Faker.Random.Int(3, 600); // in minutes
         
 
         ADpPasswordPolicyUpdater testPolicy = new(policyName);
@@ -222,8 +233,8 @@ public class AD_PasswordPolicy_Tests
 
         testPolicy.AppliesTo = new List<string>
         {
-            $"CN=Guest,CN=Users,{SupportMethods.DomainInLDAPStyle()}",
-            $"CN=Domain Admins,CN=Users,{SupportMethods.DomainInLDAPStyle()}",
+            $"CN=Guest,CN=Users,{asi.DomainInLDAPStyle()}",
+            $"CN=Domain Guests,CN=Users,{asi.DomainInLDAPStyle()}",
         }; // This is a default value, can be changed later.
         return testPolicy;
     }
@@ -237,9 +248,9 @@ public class AD_PasswordPolicy_Tests
     public void PasswordPolicyAdd()
     {
         // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer(true);
+        
         string  methodPrefix = _testPolicyPrefix + "update_";
-        string  policyName   = methodPrefix + SupportMethods.Faker.Commerce.ProductName();
+        string  policyName   = methodPrefix + asi.Faker.Commerce.ProductName();
 
 
         // B --> Additional setup
@@ -249,12 +260,12 @@ public class AD_PasswordPolicy_Tests
 
         //HelperMethods.DisplayGroup(testGroup);
 
-        Result resultA = asi.AdEngine.PasswordPolicyAdd(testPolicy);
+        Result resultA = asi.ADConnector.PasswordPolicyAdd(testPolicy);
         Assert.That(resultA.IsSuccess, Is.True, "A-120: Failed to add Password Policy.  Errors: " + resultA.ToStringErrorOnly());
 
 
         // C. --> Verify Policy was created
-        Result<ADpReadOnlyPasswordPolicy> resultC = ReadAndVerifyPasswordPolicy(asi.AdEngine,
+        Result<ADpReadOnlyPasswordPolicy> resultC = ReadAndVerifyPasswordPolicy(asi.ADConnector,
                                                                                 [],
                                                                                 policyName);
         Assert.That(resultC.IsSuccess, Is.True, "C-100:  Failed to find Password Policy --> AppError: " + resultC.ToStringErrorOnly());
@@ -287,21 +298,20 @@ public class AD_PasswordPolicy_Tests
     public void DeletePasswordPolicy()
     {
         // A --> Setup
-        Ad_SupportInitializer asi          = Ad_SupportInitializer.GetInitializer(true);
         string                methodPrefix = _testPolicyPrefix + "update_";
-        string                policyName   = methodPrefix + SupportMethods.Faker.Commerce.ProductName();
+        string                policyName   = methodPrefix + asi.Faker.Commerce.ProductName();
 
         string searchFilter = "(objectClass=msDS-PasswordSettings)";
 
 
         // B.  More Setup
         ADpPasswordPolicyUpdater testPolicy = CreateTestPasswordPolicy(policyName);
-        Result                   resultB    = asi.AdEngine.PasswordPolicyAdd(testPolicy);
+        Result                   resultB    = asi.ADConnector.PasswordPolicyAdd(testPolicy);
         Assert.That(resultB.IsSuccess, Is.True, "B-120: Failed to add Password Policy.  Errors: " + resultB.ToStringErrorOnly());
 
 
         // C. --> Verify Policy was created
-        Result<ADpReadOnlyPasswordPolicy> resultC = ReadAndVerifyPasswordPolicy(asi.AdEngine,
+        Result<ADpReadOnlyPasswordPolicy> resultC = ReadAndVerifyPasswordPolicy(asi.ADConnector,
                                                                                 [],
                                                                                 policyName);
         Assert.That(resultC.IsSuccess, Is.True, "C-100:  Failed to find Password Policy --> AppError: " + resultC.ToStringErrorOnly());
@@ -309,12 +319,12 @@ public class AD_PasswordPolicy_Tests
 
 
         // D.  Delete the policy
-        Result<DeleteResponse> deleteResult = asi.AdEngine.PasswordPolicyDelete(policy.DistinguishedName);
+        Result<DeleteResponse> deleteResult = asi.ADConnector.PasswordPolicyDelete(policy.DistinguishedName);
         Assert.That(deleteResult.IsSuccess, Is.True, "C-100:  PasswordPolicy delete failed - " + deleteResult.ToStringErrorOnly());
 
 
         // Z .  Verify the policy is deleted
-        Result<ADpReadOnlyPasswordPolicy> resultAfter = ReadAndVerifyPasswordPolicy(asi.AdEngine,
+        Result<ADpReadOnlyPasswordPolicy> resultAfter = ReadAndVerifyPasswordPolicy(asi.ADConnector,
                                                                                 [],
                                                                                 policyName,true);
         Assert.That(resultAfter.IsFailed, Is.True, "Z-100:  PasswordPolicy was not successfully deleted --> AppError: " + resultB.ToStringWithLineFeeds());
@@ -336,7 +346,7 @@ public class AD_PasswordPolicy_Tests
 
 
         // Create Test Group
-        string groupName = SupportMethods.Faker.Commerce.ProductName();
+        string groupName = asi.Faker.Commerce.ProductName();
         int i = Random.Shared.Next(1, 6) * 5;
         ADpGroupUpdater testGroup = new(groupName, (EnumGroupType)i);
 
@@ -412,9 +422,8 @@ public class AD_PasswordPolicy_Tests
     public void SampleFindPasswordPolicy()
     {
         // A --> Setup
-        Ad_SupportInitializer asi      = Ad_SupportInitializer.GetInitializer(true);
         
-        Result<List<ADpReadOnlyPasswordPolicy>> resultF = asi.AdEngine.PasswordPolicyFindOneOrMore("");
+        Result<List<ADpReadOnlyPasswordPolicy>> resultF = asi.ADConnector.PasswordPolicyFindOneOrMore("");
         Assert.That(resultF.IsSuccess, Is.True, "Z-100:  Failed to find Password Policy --> AppError: " + resultF.ToStringErrorOnly());
     }
 
@@ -424,9 +433,9 @@ public class AD_PasswordPolicy_Tests
     public void UserPasswordExpiration()
     {
         // A. Setup
-        Ad_SupportInitializer asi          = Ad_SupportInitializer.GetInitializer(true);
+        
         string                methodPrefix = _testPolicyPrefix + "update_";
-        string                policyName   = methodPrefix + SupportMethods.Faker.Commerce.ProductName();
+        string                policyName   = methodPrefix + asi.Faker.Commerce.ProductName();
 
 
         // B.  Create a userFromAdRo
@@ -435,8 +444,8 @@ public class AD_PasswordPolicy_Tests
         Assert.That(newOuResult.IsSuccess, Is.True, "B-100: Unable to create the unique containing OU for this test.  Errors: " + newOuResult.ToStringWithLineFeeds());
 
         // Create Test User Basic
-        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, SupportMethods.Faker);
-        testUser.CreateUser(asi.AdEngine);
+        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, asi.Faker);
+        testUser.CreateUser(asi.ADConnector);
 
 
         // C.  Create a password policy
@@ -444,12 +453,12 @@ public class AD_PasswordPolicy_Tests
         testPolicy.AppliesTo.Add(testUser.User.DistinquishedName);
         testPolicy.AppliesToSetFlag = true;
 
-        Result resultPol = asi.AdEngine.PasswordPolicyAdd(testPolicy);
+        Result resultPol = asi.ADConnector.PasswordPolicyAdd(testPolicy);
         Assert.That(resultPol.IsSuccess, Is.True, "A-120: Failed to add Password Policy.  Errors: " + resultPol.ToStringErrorOnly());
 
 
         // C. --> Verify Policy was created
-        Result<ADpReadOnlyPasswordPolicy> resultPolCreate = ReadAndVerifyPasswordPolicy(asi.AdEngine,
+        Result<ADpReadOnlyPasswordPolicy> resultPolCreate = ReadAndVerifyPasswordPolicy(asi.ADConnector,
                                                                                 [],
                                                                                 policyName);
         Assert.That(resultPolCreate.IsSuccess, Is.True, "C-100:  Failed to find Password Policy --> AppError: " + resultPolCreate.ToStringErrorOnly());
@@ -461,22 +470,22 @@ public class AD_PasswordPolicy_Tests
         ADpUserFromAD_RO.AddBaseAttributes(attributes);
         ADpUserFromAD_RO.AddPasswordAttributes(attributes);
 
-        Result<ADpUserEditable> resultD = asi.AdEngine.GetUserFromADViaAttribute("cn",
+        Result<ADpUserEditable> resultD = asi.ADConnector.GetUserFromADViaAttribute("cn",
                                                                                    testUser.User.CommonNameChg, asi.UnitTestParent.Path, SearchScope.Subtree,attributes);
         Assert.That(resultD.IsSuccess, Is.True, "D-100:");
         ADpUserEditable updateUser = resultD.Value;
 
         // E.  Set a new password 
-        updateUser.PasswordChg = SupportMethods.Faker.Random.AlphaNumeric(20) + "$#855aD";
+        updateUser.PasswordChg = asi.Faker.Random.AlphaNumeric(20) + "$#855aD";
         //DateTimeOffset passwordLastSet = DateTimeOffset.MinValue;
         //updateUser.PasswordLastSet =passwordLastSet;
 
         // E2. Save userFromAdRo back to AD.
-        Result<ModifyResponse> updateUserResult = asi.AdEngine.UserUpdate(updateUser);
+        Result<ModifyResponse> updateUserResult = asi.ADConnector.UserUpdate(updateUser);
         Assert.That(updateUserResult.IsSuccess, Is.True, "E-100:  Failed to update userFromAdRo with last password set date.  Errors: " + updateUserResult.ToStringErrorOnly());
 
         // F.  Read the userFromAdRo back and verify the password expiration date is set.
-        Result<ADpUserFromAD_RO> userAfterUpdateResult = asi.AdEngine.UserGetByUPN(asi.UnitTestParent.Path, testUser.User.UPN);
+        Result<ADpUserFromAD_RO> userAfterUpdateResult = asi.ADConnector.UserGetByUPN(asi.UnitTestParent.Path, testUser.User.UPN);
         Assert.That(userAfterUpdateResult.IsSuccess, Is.True, "F-100:  Failed to read userFromAdRo back from AD after update.  Errors: " + userAfterUpdateResult.ToStringErrorOnly());
         ADpUserFromAD_RO userFromAdRoAfterUpdate = userAfterUpdateResult.Value;
 
