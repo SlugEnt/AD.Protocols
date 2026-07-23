@@ -117,7 +117,7 @@ public class ActiveDirectoryConnector : EngineBase
 
             // Use AuthType.Negotiate for Windows domain networks, or AuthType.Basic for standard user/pass over secure lines.
             LdapConnection.AuthType = AuthType.Negotiate;
-            LdapConnection.Bind();
+             LdapConnection.Bind();
 
             return Result.Ok();
         }

@@ -2,7 +2,6 @@
 using NUnit.Framework.Interfaces;
 using SlugEnt;
 using SlugEnt.FluentResults;
-using SlugEnt.HR.NextGen.Common;
 using SlugEnt.AD.Protocols;
 using SlugEnt.AD.Protocols.Attributes;
 using SlugEnt.IS;
@@ -26,7 +25,7 @@ public class AD_LDapEngine_Test
     [SetUp]
     public void Setup()
     {
-        Assume.That(SupportMethods.ContinueLdapTests, Is.True);
+
     }
 
 
@@ -37,7 +36,6 @@ public class AD_LDapEngine_Test
         {
             if (_stopAllTestsOnFailure)
             {
-                SupportMethods.ContinueLdapTests = false;
             }
         }
     }
@@ -60,18 +58,18 @@ public class AD_LDapEngine_Test
     public void RootOuSetAtConstruction()
     {
         // A.  Setup
-        SupportMethods sm = new(false, false);
+        SupportMethods sm = new();
 
 
         // B.  Pre Setup Validation
 
 
         // C.  Execute
-        ADLDAPEngine adEngine = new(sm.DB!, CustomMockLoggers.GetMockLogger_AdLdapEngine);
+        ActiveDirectoryConnector adEngine = new(null);
 
 
         // Z1. Validate
-        ADSPath expected = ADSPath.FromDomainName(SupportMethods.ActiveDirectoryConfiguration!.Domain);
+        ADSPath expected = ADSPath.FromDomainName("");
         Assert.That(adEngine.DomainRoot.ToString(), Is.EqualTo(expected.ToString()), "Z-100: Root was not set to domain");
     }
 
@@ -101,7 +99,7 @@ public class AD_LDapEngine_Test
 
         if (addResult.IsFailed)
         {
-            if (addResult.Errors[0].Message == ADLDAPEngine.EXISTS)
+            if (addResult.Errors[0].Message == ActiveDirectoryConnector.EXISTS)
             {
                 
                 ADSPath deletePath   = asi.UnitTestRoot.NewChildADSPath("ou=" + HelperMethods.UTBASE);

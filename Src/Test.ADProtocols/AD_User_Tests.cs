@@ -2,7 +2,6 @@
 using Bogus.DataSets;
 using SlugEnt.AD.Protocols.Attributes;
 using SlugEnt.AD.Protocols;
-using SlugEnt.HR.NextGen.Common;
 using SlugEnt.IS;
 using System.DirectoryServices.Protocols;
 using System.Text;
@@ -196,7 +195,7 @@ public class AD_User_Tests
 
         // B. Read the userFromAdRo back to verify successful creation
         // Part B - Retrieve the User
-        string searchFilter = ADLDAPEngine.SEARCH_FILTER_ALL_USERS;
+        string searchFilter = ActiveDirectoryConnector.SEARCH_FILTER_ALL_USERS;
         List<string> attributes = [];
         ADpUserFromAD_RO.AddInfoAttributes(attributes);
         ADpUserFromAD_RO.AddBaseAttributes(attributes);
@@ -255,7 +254,7 @@ public class AD_User_Tests
 
         // B. Read the userFromAdRo back to verify successful creation
         // Part B - Retrieve the User
-        string searchFilter = ADLDAPEngine.SEARCH_FILTER_ALL_USERS;
+        string searchFilter = ActiveDirectoryConnector.SEARCH_FILTER_ALL_USERS;
         List<string> attributes = [];
         ADpUserFromAD_RO.AddInfoAttributes(attributes);
         ADpUserFromAD_RO.AddBaseAttributes(attributes);

@@ -2,6 +2,8 @@
 using SlugEnt.AD.Protocols;
 using SlugEnt.IS;
 using System.DirectoryServices.Protocols;
+using UT.CustomSupportObjects;
+using UT.SupportObjects;
 
 namespace UT.ActiveDirectory_Tests;
 
@@ -23,7 +25,7 @@ public class AD_GroupTests
         // A --> Setup
         Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer(true);
 
-        string searchFilter = ADLDAPEngine.SEARCH_FILTER_ALL_GROUPS;
+        string searchFilter = ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS;
         List<string> attributes = [];
         ADpReadOnlyGroup.AddBaseAttributes(attributes);
         ADpReadOnlyGroup.AddInfoAttributes(attributes);
@@ -76,7 +78,7 @@ public class AD_GroupTests
         Result<ADpReadOnlyGroup> resultB = ReadAndVerifyGroup(asi.AdEngine,
                                                               newOuResult.Value.Path,
                                                               [],
-                                                              ADLDAPEngine.SEARCH_FILTER_ALL_GROUPS);
+                                                              ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS);
         ADpReadOnlyGroup group = resultB.Value;
 
 
@@ -118,7 +120,7 @@ public class AD_GroupTests
         Result<ADpReadOnlyGroup> resultB = ReadAndVerifyGroup(asi.AdEngine,
                                                               newOuResult.Value.Path,
                                                               [],
-                                                              ADLDAPEngine.SEARCH_FILTER_ALL_GROUPS);
+                                                              ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS);
         ADpReadOnlyGroup group = resultB.Value;
 
 
@@ -136,7 +138,7 @@ public class AD_GroupTests
         resultB = ReadAndVerifyGroup(asi.AdEngine,
                                      newOuResult.Value.Path,
                                      [],
-                                     ADLDAPEngine.SEARCH_FILTER_ALL_GROUPS);
+                                     ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS);
         Assert.That(resultB.IsSuccess, Is.True, "D-100:  Failed to find Group --> AppError: " + resultB.ToStringWithLineFeeds());
         group = resultB.Value;
 
@@ -175,7 +177,7 @@ public class AD_GroupTests
         Result<ADpReadOnlyGroup> resultB = ReadAndVerifyGroup(asi.AdEngine,
                                                               newOuResult.Value.Path,
                                                               [],
-                                                              ADLDAPEngine.SEARCH_FILTER_ALL_GROUPS);
+                                                              ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS);
         ADpReadOnlyGroup group = resultB.Value;
 
 
@@ -188,7 +190,7 @@ public class AD_GroupTests
         resultB = ReadAndVerifyGroup(asi.AdEngine,
                                      newOuResult.Value.Path,
                                      [],
-                                     ADLDAPEngine.SEARCH_FILTER_ALL_GROUPS, true);
+                                     ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS, true);
 
         Assert.That(resultB.IsFailed, Is.True, "Z-100:  Group was not successfully deleted --> AppError: " + resultB.ToStringWithLineFeeds());
     }
@@ -228,7 +230,7 @@ public class AD_GroupTests
         Result<ADpReadOnlyGroup> resultB = ReadAndVerifyGroup(asi.AdEngine,
                                                               newOuResult.Value.Path,
                                                               [],
-                                                              ADLDAPEngine.SEARCH_FILTER_ALL_GROUPS);
+                                                              ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS);
         ADpReadOnlyGroup group = resultB.Value;
 
 
@@ -242,7 +244,7 @@ public class AD_GroupTests
         resultB = ReadAndVerifyGroup(asi.AdEngine,
                                      newOuResult.Value.Path,
                                      [],
-                                     ADLDAPEngine.SEARCH_FILTER_ALL_GROUPS,true);
+                                     ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS,true);
 
 
         Assert.That(resultB.IsFailed, Is.True, "D-100:  Group was still found in old OU. --> AppError: " + resultB.ToStringWithLineFeeds());
@@ -252,7 +254,7 @@ public class AD_GroupTests
         resultB = ReadAndVerifyGroup(asi.AdEngine,
                                      moveToOuResult.Value.Path,
                                      [],
-                                     ADLDAPEngine.SEARCH_FILTER_ALL_GROUPS);
+                                     ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS);
 
 
         Assert.That(resultB.IsSuccess, Is.True, "E-100:  Group was still found in old OU. --> AppError: " + resultB.ToStringWithLineFeeds());
@@ -282,7 +284,7 @@ public class AD_GroupTests
 
 
         // B.  Validate the group was created
-        Result<ADpReadOnlyGroup> resultB = ReadAndVerifyGroup(asi.AdEngine, newOuResult.Value.Path, [], ADLDAPEngine.SEARCH_FILTER_ALL_GROUPS);
+        Result<ADpReadOnlyGroup> resultB = ReadAndVerifyGroup(asi.AdEngine, newOuResult.Value.Path, [], ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS);
         ADpReadOnlyGroup group = resultB.Value;
 
 
@@ -297,7 +299,7 @@ public class AD_GroupTests
         resultB = ReadAndVerifyGroup(asi.AdEngine,
                                      newOuResult.Value.Path,
                                      [],
-                                     ADLDAPEngine.SEARCH_FILTER_ALL_GROUPS);
+                                     ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS);
 
 
         Assert.That(resultB.IsSuccess, Is.True, "D-100:  User was not found under new name. --> AppError: " + resultB.ToStringWithLineFeeds());
@@ -306,9 +308,9 @@ public class AD_GroupTests
 
 
 
-    private Result<ADpReadOnlyGroup> ReadAndVerifyGroup(ADLDAPEngine engine,  string ouPath, List<string> attributesList, string searchFilter = "", bool dontAssert=false)
+    private Result<ADpReadOnlyGroup> ReadAndVerifyGroup(ActiveDirectoryConnector engine,  string ouPath, List<string> attributesList, string searchFilter = "", bool dontAssert=false)
     {
-        if (string.IsNullOrEmpty(searchFilter)) searchFilter = ADLDAPEngine.SEARCH_FILTER_ALL_GROUPS;
+        if (string.IsNullOrEmpty(searchFilter)) searchFilter = ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS;
         if (attributesList.Count == 0)
         {
             ADpReadOnlyGroup.AddBaseAttributes(attributesList);

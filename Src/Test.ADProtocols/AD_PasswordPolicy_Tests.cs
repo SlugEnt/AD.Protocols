@@ -1,8 +1,7 @@
 ﻿using FluentResults.Reasons;
 using SlugEnt.FluentResults;
-using SlugEnt.HR.NextGen.Common;
+
 using SlugEnt.AD.Protocols;
-using SlugEnt.HR.NextGen.Entities;
 using SlugEnt.IS;
 using System.DirectoryServices.Protocols;
 using UT.CustomSupportObjects;
@@ -380,7 +379,7 @@ public class AD_PasswordPolicy_Tests
     /// <param name="commonName"></param>
     /// <param name="dontAssert"></param>
     /// <returns></returns>
-    private Result<ADpReadOnlyPasswordPolicy> ReadAndVerifyPasswordPolicy(ADLDAPEngine engine,
+    private Result<ADpReadOnlyPasswordPolicy> ReadAndVerifyPasswordPolicy(ActiveDirectoryConnector engine,
                                                                           List<string> attributesList,
                                                                           string commonName,
                                                                           bool dontAssert = false) //, string searchFilter = "")
