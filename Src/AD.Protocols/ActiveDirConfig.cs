@@ -35,6 +35,12 @@ public class ActiveDirConfig : IActiveDirConfig
     /// Port to connect to the Active Directory server
     /// </summary>
     public int Port { get; set; } = 389;
+
+    /// <summary>
+    /// Must be set to true when connecting from Linux Server or machine.
+    /// </summary>
+    public bool IsConnectingFromLinux { get; set; } = false;
+    
     
     /// <summary>
     /// Root Path name for the Active Directory connection.

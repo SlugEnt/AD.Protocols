@@ -89,7 +89,7 @@ public class ActiveDirectoryConnector : EngineBase
             // Set Credential
             NetworkCredential credential = new(_activeDirConfig.AdUser, _activeDirConfig.AdPassword);
             LdapConnection.Credential = credential;
-
+            
 
             DomainRoot = ADSPath.FromDomainName(_activeDirConfig.Domain);
             if (rootOU != "")
@@ -97,26 +97,22 @@ public class ActiveDirectoryConnector : EngineBase
                 RootDSE = RootDSE.NewChildADSPath("OU=" + rootOU);
             }
 
-            // Enable SSL/TLS encryption if using port 636
-            if (_activeDirConfig.Port == 636)
-            {
-                LdapConnection.SessionOptions.SecureSocketLayer = true;
 
-                // Optional: Custom certificate validation callback
-/*            LdapConnection.SessionOptions.VerifyServerCertificate = (conn,
-                                                                 cert) =>
-            {
-                // Return true to accept the certificate (e.g., self-signed in test environments)
-                // WARNING: For production, properly validate the certificate chain
-                return true;
-            };
-*/
-
-
-            }
 
             // Use AuthType.Negotiate for Windows domain networks, or AuthType.Basic for standard user/pass over secure lines.
-            LdapConnection.AuthType = AuthType.Negotiate;
+            if (activeDirConfig.IsConnectingFromLinux)
+            {
+                LdapConnection.AuthType                         = AuthType.Basic;
+                LdapConnection.SessionOptions.ProtocolVersion   = 3;
+                LdapConnection.SessionOptions.ReferralChasing   = ReferralChasingOptions.None;
+                LdapConnection.SessionOptions.SecureSocketLayer = true;
+            }
+            else
+            {
+                LdapConnection.AuthType                         = AuthType.Negotiate;
+                LdapConnection.SessionOptions.SecureSocketLayer = true;
+            }
+
             LdapConnection.Bind();
             IsConnected = true;
 
@@ -126,7 +122,7 @@ public class ActiveDirectoryConnector : EngineBase
         {
             // Handle LDAP-specific exceptions
             // Log the exception or perform any necessary error handling
-            return Result.Fail(new ExceptionalError($"LDAP exception occurred.  Server Connecting to: {_activeDirConfig.Server1Name}.{_activeDirConfig.Domain}:{_activeDirConfig.Port}", ex));
+            return Result.Fail(new ExceptionalError($"LDAP exception occurred.  Server Connecting to: {_activeDirConfig.Server1Name}.{_activeDirConfig.Domain}:{_activeDirConfig.Port} | {ex.Message}", ex));
         }
         catch (Exception ex)
         {
@@ -1115,7 +1111,7 @@ public class ActiveDirectoryConnector : EngineBase
 
             if (resultResponse.Value[0].Entries.Count > 1)
             {
-                return Result.Fail("More than one user found.  Request was for a single user");
+                return Result.Fail("More than one Group found.  Request was for a single group");
             }
 
             Result<ADpReadOnlyGroup> result = ADpReadOnlyGroup.CreateGroupObj(resultResponse.Value[0].Entries[0].Attributes);

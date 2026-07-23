@@ -96,6 +96,7 @@ public class ADpReadOnlyGroup
         attributeList.Add("cn");
         attributeList.Add("distinguishedName");
         attributeList.Add("groupType");
+        attributeList.Add("name");
     }
 
 
@@ -143,7 +144,8 @@ public class ADpReadOnlyGroup
                     group.DistinguishedName = dirObj[0].ToString();
                     distinguishedNameFound = true;
                     break;
-
+                case "name": group.Name = dirObj[0].ToString(); break;
+                
                 case "cn":
                     group.AD_CommonName = dirObj[0].ToString();
                     break;
