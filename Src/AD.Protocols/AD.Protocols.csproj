@@ -13,4 +13,8 @@
     <PackageReference Include="System.DirectoryServices.Protocols" Version="10.0.10" />
   </ItemGroup>
 
+	<!-- Add this group to expose internals -->
+	<ItemGroup>
+		<InternalsVisibleTo Include="Test.ADProtocols" />
+	</ItemGroup>
 </Project>

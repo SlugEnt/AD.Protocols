@@ -1,5 +1,6 @@
 ﻿using SlugEnt.FluentResults;
 using System.DirectoryServices.Protocols;
+using SlugEnt.IS;
 
 namespace SlugEnt.AD.Protocols;
 
@@ -26,8 +27,21 @@ public class ADpReadOnlyOrgUnit
     /// <summary>
     /// The full DN of the orgUnit
     /// </summary>
-    public string? DistinguishedName { get; protected set; }
+    public string? DistinguishedName { get;
+        protected set
+        {
+            field = value;
+            
+            // We also set the Parent Path
+            if (!string.IsNullOrEmpty(field))
+            {
+                this.ParentPath = new ADSPath(field).GetParent();
+            }
+        }
+    }
 
+    
+    public ADSPath ParentPath { get; protected set; }
 
     /// <summary>
     /// When orgUnit was last changed
@@ -52,7 +66,6 @@ public class ADpReadOnlyOrgUnit
         attributeList.Add("whenCreated");
         attributeList.Add("whenChanged");
     }
-
 
 
     /// <summary>

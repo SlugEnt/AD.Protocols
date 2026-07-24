@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using SlugEnt.FluentResults;
 using System.DirectoryServices.Protocols;
 using System.Net;
+using AD.Protocols;
 using SlugEnt.AD.Protocols.Attributes;
 using SlugEnt.IS;
 using SearchOption = System.DirectoryServices.Protocols.SearchOption;
@@ -43,26 +44,6 @@ public class ActiveDirectoryConnector : EngineBase
                         ILogger<ActiveDirectoryConnector> logger,
                         string rootOU = "") : base(logger) 
     {
-        /*
-        //GlobalAppData.ActiveDirConfig = (ActiveDirConfig)activeDirConfig;
-        //GlobalAppData.ActiveDirConfig = GlobalAppData.ActiveDirConfig;
-
-        LdapDirectoryIdentifier directory = new(GlobalAppData.ActiveDirConfig.Server1 + "." + GlobalAppData.ActiveDirConfig.Domain + ":389");
-
-        //LdapDirectoryIdentifier directory = new(activeDirConfig.Server1 + "." + activeDirConfig.Domain + ":3268");
-        LdapConnection = new LdapConnection(directory);
-
-        // Set Credential
-        NetworkCredential credential = new(GlobalAppData.ActiveDirConfig.AdUser, GlobalAppData.ActiveDirConfig.AdPassword);
-        LdapConnection.Credential = credential;
-
-        
-        DomainRoot = ADSPath.FromDomainName(GlobalAppData.ActiveDirConfig.Domain);
-        if (rootOU != "")
-        {
-            RootDSE = RootDSE.NewChildADSPath("OU=" + rootOU);
-        }
-        */
     }
 
 
@@ -234,10 +215,74 @@ public class ActiveDirectoryConnector : EngineBase
 
             return Result.Fail(new ExceptionalError("Failed to add OU: " + e.Message, e));
         }
-
-        //return Result.Fail("Failed to add OU: " + addResponse.ErrorMessage + " [ " + addResponse.ResultCode + " ]");
     }
 
+    
+    
+    /// <summary>
+    /// Saves the provided OU either as a new OU or updates an existing one based on the ADpOrgUnitUpdater object.
+    /// </summary>
+    /// <param name="orgUnit"></param>
+    /// <returns></returns>
+    private Result OuSave(ADpOrgUnitUpdater orgUnit)
+    {
+        try
+        {
+            string dn;
+            if (orgUnit.IsNew)
+            {
+                // Need to build Distinguished Name
+                dn                        = "OU=" + orgUnit.NameChg + "," + orgUnit.ParentPath.Path;
+                orgUnit.DistinquishedName = dn;
+            }
+            else
+            {
+                dn = orgUnit.DistinquishedName;
+            }
+
+            // If this is a new OU, we need to set the object class to organizationalUnit
+
+            ADSPath              newOU            = orgUnit.ParentPath.NewChildADSPath("OU=" + orgUnit.NameChg);
+            DirectoryAttribute[] attributesToLoad = orgUnit.GetDirectoryAttributesNew();
+
+            AddRequest addRequest = new(dn, attributesToLoad);
+
+
+            AddResponse addResponse = (AddResponse)LdapConnection.SendRequest(addRequest);
+            if (addResponse.ResultCode == ResultCode.Success)
+            {
+                return Result.Ok();
+            }
+
+            return Result.Fail("Failed to add OrgUnit: " + addResponse.ErrorMessage + " [ " + addResponse.ResultCode + " ]");
+
+
+        }
+        catch (Exception ex)
+        {
+            return Result.Fail(new ExceptionalError("Failed to add OrgUnit: " + ex.Message, ex));
+        }
+    }
+
+
+    /// <summary>
+    /// Creates an Active Directory Organizational Unit (OU) based on the provided ADpOrgUnitUpdater object.
+    /// If the OU is new, it constructs the Distinguished Name and sets the necessary attributes before adding it to Active Directory.
+    /// If the OU already exists, it uses the existing Distinguished Name for the update.
+    /// </summary>
+    /// <param name="orgUnit"></param>
+    /// <returns></returns>
+    public Result OuCreate(ADpOrgUnitUpdater orgUnit)
+    {
+        return OuSave(orgUnit);
+    }
+
+    
+    public Result OuUpdate (ADpOrgUnitUpdater orgUnit)
+    {
+        return OuSave(orgUnit);
+    }
+    
 
     /// <summary>
     ///     Deletes an OU and all child objects
@@ -306,6 +351,72 @@ public class ActiveDirectoryConnector : EngineBase
         }
     }
 
+
+    /// <summary>
+    ///     Returns a list of users who match the criteria.  If no users are found, it returns an empty list.
+    /// </summary>
+    /// <param name="searchContainerDn"></param>
+    /// <param name="searchScope"></param>
+    /// <param name="searchFilter"></param>
+    /// <param name="attributesToReturn"></param>
+    /// <returns></returns>
+    public Result<List<ADpReadOnlyOrgUnit>> OuFindOneOrMore(string searchContainerDn,
+                                                           SearchScope searchScope,
+                                                           List<string> attributesToReturn = null, 
+                                                           string searchFilter = "(objectClass=organizationalUnit)")
+    {
+        try
+        {
+            if (attributesToReturn == null)
+                attributesToReturn = new List<string>();
+            
+            if (attributesToReturn.Count == 0)
+            {
+                // Add in some of the basic ones.
+                ADpReadOnlyOrgUnit.AddBaseAttributes(attributesToReturn);
+            }
+
+
+            Result<List<SearchResponse>> resultResponse = SearchDirectory(searchContainerDn,
+                                                                          searchFilter,
+                                                                          searchScope,
+                                                                          [.. attributesToReturn]);
+            if (resultResponse.IsFailed)
+            {
+                return Result.Fail(resultResponse.Errors);
+            }
+
+            if (resultResponse.Value.Count == 0)
+            {
+                return Result.Fail("No active directory org units found", EnumReasonCode.NotFound);
+            }
+
+            if (resultResponse.Value[0].Entries.Count == 0)
+            {
+                return Result.Fail("No active directory org units found", EnumReasonCode.NotFound);
+            }
+
+            // Create list of Org Unit objects
+            List<ADpReadOnlyOrgUnit> orgUnits = new();
+            foreach (SearchResultEntry searchResultEntry in resultResponse.Value[0].Entries)
+            {
+                Result<ADpReadOnlyOrgUnit> result = ADpReadOnlyOrgUnit.CreateOrgUnitObj(searchResultEntry.Attributes);
+                if (result.IsFailed)
+                {
+                    return Result.Fail($"Failed to convert AD object to Org Unit Object {searchResultEntry.DistinguishedName}");
+                }
+
+                orgUnits.Add(result.Value);
+            }
+
+
+            return Result.Ok(orgUnits);
+        }
+        catch (Exception e)
+        {
+            return Result.Fail(new ExceptionalError("Unexpected exception occured", e));
+        }
+    }
 
 
     public Result<SearchResultEntryCollection> OuGetChildrenOus(ADSPath parentPath,string ouName)
@@ -676,6 +787,32 @@ public class ActiveDirectoryConnector : EngineBase
     /// </summary>
     /// <param name="commonNameValue"></param>
     /// <returns></returns>
+    public Result<ADpReadOnlyOrgUnit> OuGetByName(string searchContainerDn,
+                                                string name,
+                                                SearchScope searchScope = SearchScope.Subtree,
+                                                List<string> attributesToReturn = null)
+    {
+        try
+        {
+            return OuGetByAttribute(searchContainerDn,
+                                      "cn",
+                                      name,
+                                      searchScope,
+                                      attributesToReturn);
+        }
+        catch (Exception e)
+        {
+            return Result.Fail($"Failed to retrieve organizational unit with cn attribute [ {name} ]  | Error:  {e.Message}");
+        }
+    }
+
+
+
+    /// <summary>
+    /// Retrieves a user by their Common Name (CN) value.
+    /// </summary>
+    /// <param name="commonNameValue"></param>
+    /// <returns></returns>
     public Result<ADpUserFromAD_RO> UserGetByCn(string searchContainerDn,string commonNameValue, SearchScope searchScope = SearchScope.Subtree,
                                                List<string> attributesToReturn = null)
     {
@@ -815,6 +952,46 @@ public class ActiveDirectoryConnector : EngineBase
     }
 
 
+    /// <summary>
+    /// Retrieves a single user object based upon the provided attribute.
+    /// </summary>
+    /// <param name="searchContainerDn">Where to start the search from</param>
+    /// <param name="attributeName">Name of the attribute in AD to base search on</param>
+    /// <param name="attributeValue">The value of the attribute to search for</param>
+    /// <param name="searchScope">At what level to search</param>
+    /// <param name="attributesToReturn">Which attributes to return.  If not provided then the Basic and Info attributes are returned.</param>
+    /// <returns></returns>
+    public Result<ADpReadOnlyOrgUnit> OuGetByAttribute(string searchContainerDn,
+                                                      string attributeName,
+                                                      string attributeValue,
+                                                      SearchScope searchScope = SearchScope.Subtree,
+                                                      List<string> attributesToReturn = null)
+    {
+        try
+        {
+            // If no attributes are provided we will add the base attributes.
+            if (attributesToReturn == null)
+            {
+                attributesToReturn = new();
+                ADpReadOnlyOrgUnit.AddBaseAttributes(attributesToReturn);
+            }
+
+
+            string searchFilter = $"(&(objectClass=OrganizationalUnit)({attributeName}={attributeValue}))";
+            Result<ADpReadOnlyOrgUnit> result = OuFindSingleOrgUnit(searchContainerDn,
+                                                                searchScope,
+                                                                searchFilter,
+                                                                attributesToReturn);
+            return result;
+        }
+        catch (Exception e)
+        {
+            return Result.Fail($"Failed to retrieve organizational unit  with attribute [ {attributeName} ]  containing value [{attributeValue} | Error:  {e.Message}");
+        }
+
+    }
+
+
 
     /// <summary>
     ///     Adds a user object to the directory.  No attributes are set, just the base object is added.  
@@ -931,6 +1108,7 @@ public class ActiveDirectoryConnector : EngineBase
             return Result.Fail(new ExceptionalError("Unexpected exception occured", e));
         }
     }
+    
 
     /// <summary>
     ///     Returns a list of users who match the criteria.  If no users are found, it returns an empty list.
@@ -1062,6 +1240,69 @@ public class ActiveDirectoryConnector : EngineBase
             return Result.Fail(new ExceptionalError("Unexpected exception occured", e));
         }
     }
+
+    /// <summary>
+    /// Locates a single Organizational Unit (OU) in the directory based on the provided search criteria. If more than one OU is found, an error is returned.
+    /// </summary>
+    /// <param name="searchContainerDn"></param>
+    /// <param name="searchScope"></param>
+    /// <param name="searchFilter"></param>
+    /// <param name="attributesToReturn"></param>
+    /// <returns></returns>
+    public Result<ADpReadOnlyOrgUnit> OuFindSingleOrgUnit(string searchContainerDn,
+                                                  SearchScope searchScope,
+                                                  string searchFilter,
+                                                  List<string> attributesToReturn)
+    {
+        try
+        {
+            if (attributesToReturn.Count == 0)
+            {
+                // Add in some of the basic ones.
+                ADpUserFromAD_RO.AddBaseAttributes(attributesToReturn);
+            }
+
+
+            Result<List<SearchResponse>> resultResponse = SearchDirectory(searchContainerDn,
+                                                                          searchFilter,
+                                                                          searchScope,
+                                                                          attributesToReturn.ToArray());
+            if (resultResponse.IsFailed)
+            {
+                return Result.Fail(resultResponse.Errors);
+            }
+
+            if (resultResponse.Value.Count == 0)
+            {
+                return Result.Fail(NOT_FOUND);
+            }
+
+            if (resultResponse.Value[0].Entries.Count == 0)
+            {
+                return Result.Fail(NOT_FOUND);
+            }
+
+            if (resultResponse.Value[0].Entries.Count > 1)
+            {
+                return Result.Fail("More than one Ou found.  Request was for a single Ou");
+            }
+
+            Result<ADpReadOnlyOrgUnit> orgUnitCreation = ADpReadOnlyOrgUnit.CreateOrgUnitObj(resultResponse.Value[0].Entries[0].Attributes);
+            if (orgUnitCreation.IsFailed)
+            {
+                return Result.Fail(orgUnitCreation.Errors);
+            }
+
+
+            return Result.Ok(orgUnitCreation.Value);
+        }
+        catch (Exception e)
+        {
+            return Result.Fail(new ExceptionalError("Unexpected exception occured", e));
+        }
+    }
+
+
 
 
     /// <summary>

@@ -79,7 +79,7 @@ public class AD_LDapEngine_Test
     /// </summary>
     [Test]
     [Order(10)]
-    [TestCase(HelperMethods.UTBASE)]
+    [TestCase(HelperMethods.UT_BASEOU_NAME)]
     public void UTAddOu(string baseOuToAdd)
     {
         
@@ -87,7 +87,7 @@ public class AD_LDapEngine_Test
         Result         addResult;
         try
         {
-            addResult = asi.ADConnector.OuCreate(HelperMethods.UTBASE, asi.UnitTestRoot);
+            addResult = asi.ADConnector.OuCreate(HelperMethods.UT_BASEOU_NAME, asi.UnitTestRoot);
         }
         catch (Exception e)
         {
@@ -100,10 +100,10 @@ public class AD_LDapEngine_Test
             if (addResult.Errors[0].Message == ActiveDirectoryConnector.EXISTS)
             {
                 
-                ADSPath deletePath   = asi.UnitTestRoot.NewChildADSPath("ou=" + HelperMethods.UTBASE);
+                ADSPath deletePath   = asi.UnitTestRoot.NewChildADSPath("ou=" + HelperMethods.UT_BASEOU_NAME);
                 Result  deleteResult =asi.ADConnector.OuDeleteAll(deletePath);
                 Assert.That(deleteResult.IsSuccess, Is.True, "Z-10:  Cleanup of prior version of UT OU failed.  Failed to delete it.");
-                _ = asi.ADConnector.OuCreate(HelperMethods.UTBASE, asi.UnitTestRoot);
+                _ = asi.ADConnector.OuCreate(HelperMethods.UT_BASEOU_NAME, asi.UnitTestRoot);
             }
             else
             {
@@ -112,7 +112,7 @@ public class AD_LDapEngine_Test
         }
 
         // If here we just need to test that the OU was created.
-        Result<SearchResultEntry> searchResult = asi.ADConnector.FindSingleOuAtPath(asi.UnitTestRoot, HelperMethods.UTBASE);
+        Result<SearchResultEntry> searchResult = asi.ADConnector.FindSingleOuAtPath(asi.UnitTestRoot, HelperMethods.UT_BASEOU_NAME);
         Assert.That(searchResult.IsSuccess, "Z-100:  OU was not found after creation");
     }
 
@@ -125,7 +125,7 @@ public class AD_LDapEngine_Test
     /// </summary>
     [Test]
     [Order(30)]
-    [TestCase(HelperMethods.UTBASE)]
+    [TestCase(HelperMethods.UT_BASEOU_NAME)]
     public void UTDeleteOu(string baseOuToDelete)
     {
         
@@ -150,7 +150,7 @@ public class AD_LDapEngine_Test
 
     [Test]
     [Order(20)]
-    [TestCase(HelperMethods.UTBASE)]
+    [TestCase(HelperMethods.UT_BASEOU_NAME)]
     public void FindSingleOuAtPath(string baseOuToFind)
     {
         

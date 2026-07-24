@@ -49,5 +49,11 @@ public class ADpCommon
     public const string ATN_PASSPOL_LOCKOUTOBSERVATIONWINDOW = "msDS-LockoutObservationWindow";
     public const string ATN_PASSPOL_LOCKOUTDURATION = "msDS-LockoutDuration";
 
+    public const string OBJ_CLASS_USER = "user";
+    public const string OBJ_CLASS_GROUP = "group";
+    public const string OBJ_CLASS_ORGUNIT = "organizationalUnit";
+    public const string OBJ_CLASS_COMPUTER = "computer";
+    public const string OBJ_CLASS_PASSWORD_POLICY = "msDS-PasswordSettings";
+    
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 }

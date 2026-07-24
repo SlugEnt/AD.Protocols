@@ -1,4 +1,5 @@
-﻿using Bogus;
+﻿using System.ComponentModel;
+using Bogus;
 using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
 using SlugEnt.IS;
@@ -54,7 +55,7 @@ public class Ad_SupportInitializer
 
         UnitTestRoot   = ADConnector.DomainRoot.NewChildADSPath("ou=" + MASTER_AD_UNIT_TEST_ROOT);
         if (!_isGroup)
-            UnitTestParent = UnitTestRoot.NewChildADSPath("ou=" + HelperMethods.UTBASE);
+            UnitTestParent = UnitTestRoot.NewChildADSPath("ou=" + HelperMethods.UT_BASEOU_NAME);
         else
             UnitTestParent = UnitTestRoot.NewChildADSPath("ou=" + HelperMethods.OU_UTGROUP);
 
@@ -81,7 +82,15 @@ public class Ad_SupportInitializer
 
     public ADSPath UnitTestRoot { get; private set; }
 
-
+    /*
+    public Result<ADpReadOnlyOrgUnit> CreateRandomOuReturnReadOnlyOu(ADpReadOnlyOrgUnit parentOrgUnit)
+    {
+        Result addResult;
+        string parentPath = parentOrgUnit != null ? parentOrgUnit.
+        if (parentOrgUnit == null)
+    }  
+    */
+    
     /// <summary>
     ///     Helper Function to create a random OU from the parent path
     /// </summary>
@@ -152,4 +161,6 @@ public class Ad_SupportInitializer
         return ldapStyle;
     }
 
+    
+    public void Cleanup (){}
 }
