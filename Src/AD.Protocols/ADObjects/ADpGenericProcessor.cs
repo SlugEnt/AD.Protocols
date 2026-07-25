@@ -71,43 +71,24 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
                                 string searchFilter,
                                 bool findOnlyOne = false)
     {
-        //        Result<SearchResultEntryCollection> result = base.Find(searchContainerDn, searchScope, searchFilter);
         try
         {
-            if (AttributeRetrieverMgr.Count  == 0)
-            {
-                // Add in some of the basic ones.
-                // TODO: need to add some base attributes to the list of attributes to return.  This is because some of the base attributes are not returned by default.
-                //ADpUserFromAD_RO.AddBaseAttributes(attributesToReturn);
-            }
-
-
             Result<List<SearchResponse>> resultResponse = SearchDirectoryRaw(searchContainerDn,
                                                                              searchFilter,
-                                                                             searchScope,
-                                                                             AttributeRetrieverMgr.Attributes);
+                                                                             searchScope);
             if (resultResponse.IsFailed)
-            {
                 return Result.Fail(resultResponse.Errors);
-            }
-
-            if (resultResponse.Value.Count == 0)
-            {
-                return Result.Fail(NOT_FOUND);
-            }
-
-            if (resultResponse.Value[0].Entries.Count == 0)
-            {
-                return Result.Fail(NOT_FOUND);
-            }
             
+            if (resultResponse.Value.Count == 0)
+                return Result.Fail(NOT_FOUND);
+            
+            if (resultResponse.Value[0].Entries.Count == 0)
+                return Result.Fail(NOT_FOUND);
             
             // Now process the returned entries into Objects of the specified type.
             if (findOnlyOne && resultResponse.Value.Count > 1)
-            {
                 return Result.Fail($"More than one {ObjectEnglishName} found.  Request was for a single {ObjectEnglishName}");
-            }
-
+            
             List<T> adObjects = new List<T>();
 
             // TODO I do not like the fact that we are returning a list of errors here.
@@ -131,13 +112,7 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
         {
             return Result.Fail(new ExceptionalError("Unexpected exception occured", e));
         }
-
-
-        ///////////////////////////////////////////
-        /// 
-        /// /////////////////////////////////////////
-
-        
+   
     }
 
 
@@ -190,6 +165,33 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
         return ObjectSave(obj);
     }
 
+
+    /// <summary>
+    /// Retries a single object from Active Directory based on the specified distinguished name.
+    /// </summary>
+    /// <param name="distinguishedName"></param>
+    /// <returns></returns>
+    public Result<T> Get(string distinguishedName)
+    {
+        Result<SearchResultEntryCollection> result = GetSingle(distinguishedName);
+        if (result.IsFailed)
+        {
+            return Result.Fail(result.Errors);
+        }
+        if (result.Value.Count == 0)
+        {
+            return Result.Fail($"No {ObjectEnglishName} found.");
+        }
+
+        Result<T> objResult = CreateObjectFromAttributes(result.Value[0].Attributes);
+        if (objResult.IsFailed)
+            return Result.Fail(objResult.ToStringErrorOnly());
+
+        // Return the object.
+        return Result.Ok(objResult.Value);
+    }
+    
+    
 
     /// <summary>
     /// Adds the AD attributes when Created and Changed to list of attributes to retrieve.

@@ -216,11 +216,31 @@ public class Test_OU
         // V --> Verify
         Assert.That(delResult.IsSuccess, Is.True, "[C-100]  Failed to delete the OU.  Errors: " + delResult.ToStringWithLineFeeds());
 
-        string       searchFilter       = ActiveDirectoryConnector.SEARCH_FILTER_ALL_OU;
+        Result<ADpOrgUnit> result       = ouProcessor.Get(ou.DistinguishedName);
+        Assert.That(result.IsFailed,Is.True, "[V-100]  Retrieving the OU should have failed. Errors: " + result.ToStringWithLineFeeds());
+    }
+
+
+    [Test]
+    public void GetSingle()
+    {
+        // A --> Setup
+        Result<ADSPath> newOuResult;
+        ADSPath         parentOu = asi.UnitTestParent;
+        string          ouName   = asi.Faker.Random.Word();
+
+        ADpOrgUnitProcessor ouProcessor = new ADpOrgUnitProcessor(asi.ADConnector.LdapConnection);
+
+        ADpOrgUnit ou = new(ouName, parentOu);
+        newOuResult = ouProcessor.AddNew(ou);
+        Assert.That(newOuResult.IsSuccess, Is.True, "[B-100]  Unable to create the unique containing OU for this test.  Errors: " + newOuResult.ToStringWithLineFeeds());
+
         
-        Result<List<ADpOrgUnit>> result = ouProcessor.Find(parentOu.Path, SearchScope.Subtree, searchFilter);
-        Assert.That(result.IsSuccess,Is.True, "[V-100]  Failed to find the OU in AD. Errors: " + result.ToStringWithLineFeeds());
-        Assert.That(result.Value.Count,Is.Zero,"[V-110]  OU still exists in AD after deletion.");
+        // C --> Act
+        Result<ADpOrgUnit> result = ouProcessor.Get(ou.DistinguishedName);
+        Assert.That(result.IsSuccess,Is.True,"[V_100]");
+        Assert.That(result.Value.CommonName, Is.EqualTo(ou.CommonName), "[V_110]");
+
     }
     /*
 

@@ -120,6 +120,35 @@ public abstract class ADpBaseProcessor
 
 
     /// <summary>
+    /// Retrieves a single object based upon the provided distinguished name.
+    /// </summary>
+    /// <param name="dn">The distinguished name of the object to retrieve.</param>
+    /// <param name="searchScope">The scope of the search.</param>
+    /// <param name="attributesToReturn">The attributes to return for the object.</param>
+    /// <returns>A Result containing the search result entry collection or an error.</returns>
+    protected Result<SearchResultEntryCollection> GetSingle (string dn)
+    {
+        SearchScope searchScope = SearchScope.Base;
+        string searchFilter = $"(objectClass=*)";
+        
+        
+        //        Result<SearchResultEntryCollection> result = Find(dn, searchScope, $"(objectClass={_objectClass})", attributesToReturn);
+        Result<List<SearchResponse>> result = 
+            SearchDirectoryRaw(dn,searchFilter, searchScope);
+        
+        if (result.IsFailed)
+            return Result.Fail(result.Errors);
+        
+        if (result.Value.Count == 0)
+            return Result.Fail(NOT_FOUND);
+        
+        if (result.Value[0].Entries.Count == 0)
+            return Result.Fail(NOT_FOUND);
+        
+        return Result.Ok(result.Value[0].Entries);
+    }
+
+    /// <summary>
     /// Finds all objects that match the search scope and filter.
     /// Converts them to the appropriate object type and returns them in a list.
     /// </summary>
@@ -130,22 +159,13 @@ public abstract class ADpBaseProcessor
     /// <returns></returns>
     protected Result<SearchResultEntryCollection> Find(string searchContainerDn,
                                                   SearchScope searchScope,
-                                                  string searchFilter,
-                                                  List<string> attributesToReturn)
+                                                  string searchFilter)
     {
         try
         {
-            if (attributesToReturn.Count == 0)
-            {
-                // Add in some of the basic ones.
-                ADpUserFromAD_RO.AddBaseAttributes(attributesToReturn);
-            }
-
-
             Result<List<SearchResponse>> resultResponse = SearchDirectoryRaw(searchContainerDn,
                                                                           searchFilter,
-                                                                          searchScope,
-                                                                          attributesToReturn.ToArray());
+                                                                          searchScope);
             if (resultResponse.IsFailed)
             {
                 return Result.Fail(resultResponse.Errors);
@@ -183,8 +203,7 @@ public abstract class ADpBaseProcessor
     /// <returns>Result Success or Failure (along with error message)</returns>
     public Result<List<SearchResponse>> SearchDirectoryRaw(string searchContainerDn,
                                                         string searchFilter,
-                                                        SearchScope searchScope,
-                                                        params string[] attributeList)
+                                                        SearchScope searchScope)
     {
         List<SearchResponse> result = new();
         SearchResponse? response = null;
@@ -199,7 +218,7 @@ public abstract class ADpBaseProcessor
             SearchRequest searchRequest = new(searchContainerDn,
                                               searchFilter,
                                               searchScope,
-                                              attributeList);
+                                              AttributeRetrieverMgr.Attributes);
             searchRequest.Controls.Add(pageRequestControl);
 
             while (true)

@@ -88,7 +88,7 @@ public class ADpOrgUnit : ADpBaseObject
     /// <returns></returns>
     internal override string BuildDistinguishedNamePrefix()
     {
-        return $"ou={CommonName}";
+        return $"OU={CommonName}";
     }
 
 

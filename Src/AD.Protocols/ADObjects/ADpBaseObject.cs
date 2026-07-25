@@ -82,7 +82,7 @@ public abstract class ADpBaseObject
     /// <returns></returns>
     internal virtual string BuildDistinguishedNamePrefix()
     {
-        return $"cn={CommonName}";
+        return $"CN={CommonName}";
     }
 
 
