@@ -44,7 +44,13 @@ public class ADpOrgUnitProcessor : ADpGenericProcessor<ADpOrgUnit>
 
     }
 
-    
+
+    /// <summary>
+    /// OU's do not use CN as the name attribute, they use OU.
+    /// This property overrides the base class to set the name attribute to OU.
+    /// </summary>
+    protected override string NameAttributeName { get; set; } = "ou";
+
 
     /// <summary>
     /// Set Default Attributes to be retrieved if none are defined at time of retrieval from AD

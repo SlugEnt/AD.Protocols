@@ -67,66 +67,57 @@ public class Test_OU
         
         Assert.That(newOuResult.IsSuccess, Is.True, "[V-100]  Unable to create the unique containing OU for this test.  Errors: " + newOuResult.ToStringWithLineFeeds());
     }
-
-
-    [Test]
-    public void CreateOrgUnitFromOuObject()
-    {
-        // A. Setup
-        string  ouName      = asi.Faker.Random.Word();
-        string  description = asi.Faker.Random.Words(5);
-        ADSPath parentOu    = asi.UnitTestParent;
-
-        ADpOrgUnitUpdater orgUnit = new ADpOrgUnitUpdater(ouName, parentOu);
-        orgUnit.DescriptionChg = description;
-
-        // Verify the orgUnit object has the correct properties
-        Assert.That(orgUnit.NameChg, Is.EqualTo(ouName), "[A_100] NameChg does not match the expected value.");
-        Assert.That(orgUnit.ParentPath, Is.EqualTo(parentOu), "[A_110] ParentPath does not match the expected value.");
-        Assert.That(orgUnit.DescriptionChg, Is.EqualTo(description), "[A_120] DescriptionChg does not match the expected value.");
-        Assert.That(orgUnit.IsNew, Is.True, "[A_130] IsNew is not true as expected.");
-
-
-        // B Act
-        Result<ADpOrgUnitUpdater> orgUnitResult = asi.ADConnector.OuCreate(orgUnit);
-        Assert.That(orgUnitResult.IsSuccess,
-                    Is.True,
-                    $"[B-100]  Failed to create OU with OuCreateUpdater. Errors: {orgUnitResult.ToStringErrorOnly()}");
-
-        Assert.That(asi.ADConnector.OuExists(parentOu, ouName).Value, Is.True, "[B-110] OU does not exist after creation.");
-    }
-
+    
 
     [Test]
     public void UpdateOuProperties()
     {
-        // A. Setup
-        string  ouName      = asi.Faker.Random.Word();
-        string  description = asi.Faker.Random.Words(5);
-        ADSPath parentOu    = asi.UnitTestParent;
+        // A --> Setup
+        Result<ADSPath> newOuResult;
+        ADSPath         parentOu = asi.UnitTestParent;
+        string          ouName   = asi.Faker.Random.Word();
 
-        ADpOrgUnitUpdater orgUnit = new ADpOrgUnitUpdater(ouName, parentOu);
-        orgUnit.DescriptionChg = description;
+        // B Act.
+        ADpOrgUnitProcessor ouProcessor = new ADpOrgUnitProcessor(asi.ADConnector.LdapConnection);
 
-        // Verify the orgUnit object has the correct properties
-        Assert.That(orgUnit.IsNew, Is.True, "[A_130] IsNew is not true as expected.");
+        ADpOrgUnit ou = new(ouName, parentOu);
+        newOuResult = ouProcessor.AddNew(ou);
+        Assert.That(newOuResult.IsSuccess, Is.True, "[B-100]  Unable to create the unique containing OU for this test.  Errors: " + newOuResult.ToStringWithLineFeeds());
 
+        string newDescription = "999999abc";
+        ou.Description = newDescription;
+        ouProcessor.Update(ou);
 
-        // B Setup - Save the new OU to AD
-        Result<ADpOrgUnitUpdater> orgUnitResult = asi.ADConnector.OuCreate(orgUnit);
-        Assert.That(orgUnitResult.IsSuccess,
-                    Is.True,
-                    $"[B-100]  Failed to create OU with OuCreateUpdater. Errors: {orgUnitResult.ToStringErrorOnly()}");
+        // Read the object back from AD to verify the update
+        // Read the object back from AD to verify the update
+        Result<ADpOrgUnit> updatedOuResult = ouProcessor.Get(ou.DistinguishedName);
 
-        // C Verify the OU exists in AD
-        Assert.That(asi.ADConnector.OuExists(parentOu, ouName).Value, Is.True, "[B-110] OU does not exist after creation.");
+        Assert.That(updatedOuResult.IsSuccess, Is.True, "[C-100] Failed to retrieve the updated OU from AD. Errors: " + updatedOuResult.ToStringWithLineFeeds());
+        Assert.That(updatedOuResult.Value.Description, Is.EqualTo(newDescription), "[C-110] The OU description was not updated correctly.");
 
-        // D Retrieve the object from AD to verify the properties
-        Result<List<ADpReadOnlyOrgUnit>> resultFind = asi.ADConnector.OuFindOneOrMore(parentOu.Path, SearchScope.Base);
-        Assert.That(resultFind.IsSuccess, Is.True, "[D-100] Failed to find the OU in AD. Errors: " + resultFind.ToStringWithLineFeeds());
-
+        // Cleanup
+        ouProcessor.Delete(ou.DistinguishedName);
+        
     }
 
+
+    [Test]
+    public void SimpleCreate()
+    {
+        // A --> Setup
+        ADSPath parentOu                = asi.UnitTestParent;
+        string  ouName                  = asi.Faker.Random.Word()+"5456";
+        string  objectClass             = "user";
+        string  distinguishedNamePrefix = "cn";
+        
+        ADpOrgUnitProcessor ouProcessor = new ADpOrgUnitProcessor(asi.ADConnector.LdapConnection);
+        Result result =  ouProcessor.CreateSimple(ouName,
+                                 parentOu,
+                                 objectClass,
+                                 distinguishedNamePrefix);
+
+        Assert.That(result.IsSuccess, Is.True, "[B-100]  Unable to create the unique containing OU for this test.  Errors: " + result.ToStringWithLineFeeds());
+    }
     
     //*****************************************************************
     // New Tests 
@@ -138,9 +129,9 @@ public class Test_OU
         List<string> attributesToReturn = new List<string>();
         ADpReadOnlyOrgUnit.AddBaseAttributes(attributesToReturn);
         
-        ADpOrgUnitProcessor x            = new (asi.ADConnector.LdapConnection);
+        ADpOrgUnitProcessor ouProcessor = new (asi.ADConnector.LdapConnection);
         
-        Result<List<ADpOrgUnit>> result = x.Find(asi.UnitTestRoot.Path, SearchScope.Subtree,
+        Result<List<ADpOrgUnit>> result = ouProcessor.Find(asi.UnitTestRoot.Path, SearchScope.Subtree,
                searchFilter);
         Assert.That(result.IsSuccess, Is.True, "[V-200]  Failed to find OUs. Errors: " + result.ToStringWithLineFeeds());
         Assert.That(result.Value.Count, Is.GreaterThan(0), "[V-210]  No OUs found.");
@@ -221,6 +212,9 @@ public class Test_OU
     }
 
 
+    /// <summary>
+    /// Validates we can retrieve a single OU using Distinguished name
+    /// </summary>
     [Test]
     public void GetSingle()
     {
@@ -239,6 +233,28 @@ public class Test_OU
         // C --> Act
         Result<ADpOrgUnit> result = ouProcessor.Get(ou.DistinguishedName);
         Assert.That(result.IsSuccess,Is.True,"[V_100]");
+        Assert.That(result.Value.CommonName, Is.EqualTo(ou.CommonName), "[V_110]");
+    }
+
+
+    [Test]
+    public void GetByName()
+    {
+        // A --> Setup
+        Result<ADSPath> newOuResult;
+        ADSPath         parentOu = asi.UnitTestParent;
+        string          ouName   = asi.Faker.Random.Word();
+
+        ADpOrgUnitProcessor ouProcessor = new ADpOrgUnitProcessor(asi.ADConnector.LdapConnection);
+
+        ADpOrgUnit ou = new(ouName, parentOu);
+        newOuResult = ouProcessor.AddNew(ou);
+        Assert.That(newOuResult.IsSuccess, Is.True, "[B-100]  Unable to create the unique containing OU for this test.  Errors: " + newOuResult.ToStringWithLineFeeds());
+
+
+        // C --> Act
+        Result<ADpOrgUnit> result = ouProcessor.GetBy_Name(ou.Name,parentOu);
+        Assert.That(result.IsSuccess, Is.True, "[V_100]");
         Assert.That(result.Value.CommonName, Is.EqualTo(ou.CommonName), "[V_110]");
 
     }

@@ -1,5 +1,8 @@
-﻿using SlugEnt.FluentResults;
+﻿using SlugEnt.AD.Protocols.Attributes;
+using SlugEnt.FluentResults;
+using SlugEnt.IS;
 using System.DirectoryServices.Protocols;
+using System.Xml.Linq;
 
 namespace AD.Protocols.ADObjects;
 
@@ -127,6 +130,9 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
     public Result<DeleteResponse> Delete(T obj) { return Delete(obj.DistinguishedName); }
 
     
+    
+    
+    
     /// <summary>
     /// Performs the actual save of an object to Active Directory.
     /// </summary>
@@ -147,6 +153,10 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
             AddResponse addResponse = (AddResponse)_ldapConnection.SendRequest(addRequest);
             if (addResponse.ResultCode == ResultCode.Success)
             {
+                obj.IsNew = false;
+                // Clear the changed attributes since we just saved the object to AD.
+                obj.AttributesToUpdate.Clear();
+                
                 return Result.Ok();
             }
 
@@ -190,8 +200,62 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
         // Return the object.
         return Result.Ok(objResult.Value);
     }
-    
-    
+
+
+    /// <summary>
+    /// Retries all objects from Active Directory based on the specified name within the specified OU and scope
+    /// </summary>
+    /// <param name="name"></param>
+    /// <returns></returns>
+    public Result<T> GetBy_Name(string name, ADSPath startingSearchPath, SearchScope searchScope = SearchScope.Subtree)
+    {
+        Result<List<T>> result = FindByAttribute(startingSearchPath.Path,NameAttributeName,name, searchScope);
+        if (result.IsFailed)
+            return Result.Fail(result.Errors);
+
+        if (result.Value.Count == 0)
+            return Result.Fail($"No {ObjectEnglishName} found.");
+
+        if (result.Value.Count > 1)
+            return Result.Fail($"Expected to only find one match for the given attribute, but found multiple {ObjectEnglishName}s.");
+        
+        // Return the object.
+        return Result.Ok(result.Value[0]);
+    }
+
+
+    /// <summary>
+    /// Retrieves a list of objects from Active Directory based on the specified attribute name and value.
+    /// </summary>
+    /// <param name="searchContainerDn"></param>
+    /// <param name="attributeName"></param>
+    /// <param name="attributeValue"></param>
+    /// <param name="searchScope"></param>
+    /// <returns></returns>
+    public Result<List<T>> FindByAttribute(string searchContainerDn,
+                                           string attributeName,
+                                           string attributeValue,
+                                           SearchScope searchScope = SearchScope.Subtree)
+    {
+        Result<SearchResultEntryCollection> result = base.FindByAttribute(searchContainerDn, attributeName, attributeValue, searchScope);
+        if (result.IsFailed)
+            return Result.Fail(result.Errors);
+        if (result.Value.Count == 0)
+            return Result.Fail($"No {ObjectEnglishName} found.");
+
+        List<T> adObjects = new List<T>();
+        foreach (SearchResultEntry entry in result.Value)
+        {
+            Result<T> objResult = CreateObjectFromAttributes(entry.Attributes);
+            if (objResult.IsFailed)
+            {
+                return Result.Fail(objResult.ToStringErrorOnly());
+            }
+            adObjects.Add(objResult.Value);
+        }
+        return Result.Ok(adObjects);
+    }
+
 
     /// <summary>
     /// Adds the AD attributes when Created and Changed to list of attributes to retrieve.
@@ -211,5 +275,67 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
         AttributeRetrieverMgr.AddAttribute("distinguishedName");
         AttributeRetrieverMgr.AddAttribute("cn");
     }
+
+
+    /// <summary>
+    /// Updates the object in Active Directory.  Only updates changes attributes.
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <returns></returns>
+    public Result<ModifyResponse> Update(T obj) 
+    {
+        try
+        {
+            DirectoryAttributeModification[] modifications = new DirectoryAttributeModification[obj.AttributesToUpdate.Count];
+            int i = 0;
+
+            foreach (KeyValuePair<string, AttributeBase> attributeBase in obj.AttributesToUpdate)
+            {
+                AttributeBase attribute = attributeBase.Value;    
+            
+                // Determine the type of modification to perform on the attribute.
+                DirectoryAttributeModification modification = new()
+                {
+                    Operation = ToOperation(attribute.OperationMode),
+                    Name = attribute.Name
+                };
+                if (attribute is AttributeStringSingle ass)
+                    modification.Add(ass.Value);
+
+                else if (attribute is AttributeByteArray aba)
+                    modification.Add(aba.Value);
+                else if (attribute is AttributeDateTimeOffset ado)
+                    modification.Add(ado.Value);
+                else if (attribute is AttributeDateTimeOffset adt)
+                    modification.Add(adt.Value);
+                else if (attribute is AttributeInt ain)
+                    modification.Add(ain.Value);
+                else
+                {
+                    modification.AddRange((string[])attribute.Value);
+                }
+
+                modifications[i++] = modification;
+            }
+
+            ModifyRequest modifyRequest = new(obj.DistinguishedName, modifications);
+            PermissiveModifyControl permissiveModify = new();
+            modifyRequest.Controls.Add(permissiveModify);
+
+            ModifyResponse modifyResponse = (ModifyResponse)_ldapConnection.SendRequest(modifyRequest);
+            if (modifyResponse.ResultCode == ResultCode.Success)
+            {
+                return Result.Ok(modifyResponse);
+            }
+
+            return Result.Fail($"Failed to update {ObjectEnglishName}: " + modifyResponse.ErrorMessage + " [ " + modifyResponse.ResultCode + " ]");
+        }
+        catch (Exception e)
+        {
+            return Result.Fail(new ExceptionalError($"Failed to update {ObjectEnglishName}: " + e.Message, e));
+        }
+
+    }
+
 }
 

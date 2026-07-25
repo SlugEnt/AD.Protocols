@@ -44,7 +44,7 @@ public abstract class ADpBaseObject
     /// <summary>
     /// If the object is a new object - not coming from Active Directory.
     /// </summary>
-    public bool IsNew { get; protected set; }
+    public bool IsNew { get; internal set; }
 
     /// <summary>
     /// Used to prevent adding attributes to the AttributesToUpdate dictionary when initially creating the object
@@ -59,12 +59,11 @@ public abstract class ADpBaseObject
     public ADSPath ParentPath { get; protected set; }
 
 
-
     /// <summary>
     ///     The list of attributes that have been updated since initial loading and thus
     /// if saved, will be updated in AD.  This is used to track changes to the object and only update the attributes that have changed.
     /// </summary>
-    protected Dictionary<string, AttributeBase> AttributesToUpdate = new();
+    internal Dictionary<string, AttributeBase> AttributesToUpdate = new();
 
 
     /// <summary>
@@ -201,7 +200,6 @@ public abstract class ADpBaseObject
         get => CommonName;
         set => CommonName = value;
     }
-
 
 
     /// <summary>

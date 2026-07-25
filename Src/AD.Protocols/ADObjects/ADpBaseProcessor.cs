@@ -1,6 +1,9 @@
 ﻿using SlugEnt.AD.Protocols;
+using SlugEnt.AD.Protocols.Attributes;
 using SlugEnt.FluentResults;
 using System.DirectoryServices.Protocols;
+using System.Xml.Linq;
+using SlugEnt.IS;
 
 namespace AD.Protocols.ADObjects;
 
@@ -46,7 +49,11 @@ public abstract class ADpBaseProcessor
     /// </summary>
     protected string ObjectEnglishName { get; private set; }
 
-    
+    /// <summary>
+    /// Which attribute is used to represent the name of the object.
+    /// For example, "cn" for users and groups, "ou" for organizational units, etc.
+    /// </summary>
+    protected virtual string NameAttributeName { get; set; } = "cn";
     
     /// <summary>
     /// Deletes the requested object from Active Directory.  The distinguishedName must be provided.
@@ -86,36 +93,31 @@ public abstract class ADpBaseProcessor
     /// <param name="searchScope">At what level to search</param>
     /// <param name="attributesToReturn">Which attributes to return.  If not provided then the Basic and Info attributes are returned.</param>
     /// <returns></returns>
-    public Result<object> ObjectGetByAttribute(string searchContainerDn,
+    public Result<SearchResultEntryCollection> FindByAttribute(string searchContainerDn,
                                                       string attributeName,
                                                       string attributeValue,
-                                                      SearchScope searchScope = SearchScope.Subtree,
-                                                      List<string> attributesToReturn = null)
+                                                      SearchScope searchScope = SearchScope.Subtree)
     {
-        /*
+        
         try
         {
-            // If no attributes are provided we will add the base attributes.
-            if (attributesToReturn == null)
-            {
-                attributesToReturn = new();
-                ADpUserFromAD_RO.AddAllAttributes(attributesToReturn);
-            }
-
-
-            string searchFilter = $"(&(objectClass=Person)({attributeName}={attributeValue}))";
-            Result<ADpUserFromAD_RO> result = FindSingleObject(searchContainerDn,
+            string searchFilter = $"(&(objectClass={_objectClass})({attributeName}={attributeValue}))";
+            
+            Result<SearchResultEntryCollection> result = Find(searchContainerDn,
                                                                 searchScope,
-                                                                searchFilter,
-                                                                attributesToReturn);
-            return result;
+                                                                searchFilter);
+            if (result.IsFailed)
+                return result;
+            if (result.Value.Count == 0)
+                return Result.Fail(NOT_FOUND);
+
+            return Result.Ok(result.Value);
+
         }
         catch (Exception e)
         {
             return Result.Fail($"Failed to retrieve user with attribute [ {attributeName} ]  containing value [{attributeValue} | Error:  {e.Message}");
         }
-        */
-        return Result.Fail("");
     }
 
 
@@ -148,6 +150,7 @@ public abstract class ADpBaseProcessor
         return Result.Ok(result.Value[0].Entries);
     }
 
+    
     /// <summary>
     /// Finds all objects that match the search scope and filter.
     /// Converts them to the appropriate object type and returns them in a list.
@@ -247,11 +250,57 @@ public abstract class ADpBaseProcessor
     }
 
 
+    public Result CreateSimple(string name, ADSPath parentPath, string objectClass,string distinguishedNamePrefix = "cn" )
+    {
+        try
+        {
+            string dn = $"{distinguishedNamePrefix}={name},{parentPath.Path}";
+            
+            AddRequest  addRequest  = new(dn, objectClass);
+            AddResponse addResponse = (AddResponse)_ldapConnection.SendRequest(addRequest);
+            if (addResponse.ResultCode == ResultCode.Success)
+            {
+                return Result.Ok();
+            }
+
+            return Result.Fail("Failed to add OU: " + addResponse.ErrorMessage + " [ " + addResponse.ResultCode + " ]");
+        }
+        catch (Exception e)
+
+        {
+            if (e.Message.Contains("ENTRY_EXISTS"))
+            {
+                return Result.Fail(EXISTS);
+            }
+
+            return Result.Fail(new ExceptionalError("Failed to add OU: " + e.Message, e));
+        }
+
+    }
+
+
     /// <summary>
     /// Provides access to the AttributeRetrieverMgr which is used to set the attributes that
     /// should be returned from Active Directory when retrieving objects.  This allows for customization of the attributes that are returned for different object types.
     /// </summary>
     public AttributeRetrieverMgr AttributeRetrieverMgr { get; private set; } = new AttributeRetrieverMgr();
+
+
+    /// <summary>
+    ///    Converts the EnumAttributeOperation to the DirectoryAttributeOperation
+    /// </summary>
+    /// <param name="operation"></param>
+    /// <returns></returns>
+    protected static DirectoryAttributeOperation ToOperation(EnumAttributeOperation operation)
+    {
+        return operation switch
+        {
+            EnumAttributeOperation.Add    => DirectoryAttributeOperation.Add,
+            EnumAttributeOperation.Delete => DirectoryAttributeOperation.Delete,
+            EnumAttributeOperation.Modify => DirectoryAttributeOperation.Replace,
+            _                             => DirectoryAttributeOperation.Add
+        };
+    }
 
 }
 
