@@ -128,7 +128,7 @@ public class ActiveDirectoryConnector : EngineBase
     /// <summary>
     ///     The LDAP Connection used to communicate to AD Server.
     /// </summary>
-    protected LdapConnection LdapConnection { get; set; }
+    public LdapConnection LdapConnection { get; protected set; }
 
 
     /// <summary>
@@ -602,7 +602,7 @@ public class ActiveDirectoryConnector : EngineBase
                                                         params string[] attributeList)
     {
         List<SearchResponse> result              = new();
-        SearchResponse?       response            = null;
+        SearchResponse?      response            = null;
         int                  maxResultsToRequest = 200;
 
         try

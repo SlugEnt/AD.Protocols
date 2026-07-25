@@ -108,10 +108,12 @@ public class Ad_SupportInitializer
             while (true)
             {
                 string newOuName = Faker.Random.Word();
+                
                 // Since word is really words, we need to remove bogus characters
                 newOuName = newOuName.Replace("&", string.Empty);
 
                 // Now  add OU to LDAP
+                  
                 addResult =  ADConnector.OuCreate(newOuName, parentPath);
                 if (addResult.IsSuccess)
                 {

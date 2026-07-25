@@ -7,6 +7,7 @@ using System.DirectoryServices.Protocols;
 using System.Formats.Asn1;
 using System.Text;
 using AD.Protocols;
+using AD.Protocols.ADObjects;
 using UT;
 using UT.CustomSupportObjects;
 using UT.SupportObjects;
@@ -124,6 +125,102 @@ public class Test_OU
         Result<List<ADpReadOnlyOrgUnit>> resultFind = asi.ADConnector.OuFindOneOrMore(parentOu.Path, SearchScope.Base);
         Assert.That(resultFind.IsSuccess, Is.True, "[D-100] Failed to find the OU in AD. Errors: " + resultFind.ToStringWithLineFeeds());
 
+    }
+
+    
+    //*****************************************************************
+    // New Tests 
+    
+    [Test]
+    public void NewTestSearch()
+    {
+        string searchFilter       = ActiveDirectoryConnector.SEARCH_FILTER_ALL_OU;
+        List<string> attributesToReturn = new List<string>();
+        ADpReadOnlyOrgUnit.AddBaseAttributes(attributesToReturn);
+        
+        ADpOrgUnitProcessor x            = new (asi.ADConnector.LdapConnection);
+        
+        Result<List<ADpOrgUnit>> result = x.Find(asi.UnitTestRoot.Path, SearchScope.Subtree,
+               searchFilter);
+        Assert.That(result.IsSuccess, Is.True, "[V-200]  Failed to find OUs. Errors: " + result.ToStringWithLineFeeds());
+        Assert.That(result.Value.Count, Is.GreaterThan(0), "[V-210]  No OUs found.");
+    }
+
+
+    /// <summary>
+    /// Tests simple adding of a new OU to AD using the ADpOrgUnitProcessor.
+    /// </summary>
+    [Test]
+    public void AddNew_Success()
+    {
+        // A --> Setup
+        Result<ADSPath> newOuResult;
+        ADSPath         parentOu = asi.UnitTestParent;
+        string          ouName   = asi.Faker.Random.Word();
+
+        // B Act.
+        ADpOrgUnitProcessor ouProcessor = new ADpOrgUnitProcessor(asi.ADConnector.LdapConnection);
+        
+        ADpOrgUnit ou = new (ouName, parentOu);
+        newOuResult = ouProcessor.AddNew(ou);
+        
+        
+        Assert.That(newOuResult.IsSuccess, Is.True, "[V-100]  Unable to create the unique containing OU for this test.  Errors: " + newOuResult.ToStringWithLineFeeds());
+    }
+
+
+    /// <summary>
+    /// Confirms that the default attributes for an OU are set correctly in the ADpOrgUnitProcessor
+    /// if the user does nothing to specify any attributes to return.
+    /// Also, confirms the proper attributes are returned when the default attributes are set.
+    /// </summary>
+    [Test]
+    public void DefaultAttributes_Set()
+    {
+        // A --> Setup
+        string searchFilter       = ActiveDirectoryConnector.SEARCH_FILTER_ALL_OU;
+        List<string> attributesToReturn = new List<string>();
+
+        ADpOrgUnitProcessor ouProcessor = new ADpOrgUnitProcessor(asi.ADConnector.LdapConnection);
+        ouProcessor.AttrRetrieval_Default();
+        string[] attributes = ouProcessor.AttributeRetrieverMgr.Attributes;
+        
+        Assert.That(attributes.Length, Is.EqualTo(3), "[V_100]");
+        Assert.That(attributes, Does.Contain("ou"),"[V_110]");
+        Assert.That(attributes, Does.Contain("cn"),"[V_120]");
+        Assert.That(attributes, Does.Contain("distinguishedName"),"[V_130]");
+    }
+
+
+    /// <summary>
+    /// Tests simple deletion of an OU from AD using the ADpOrgUnitProcessor.
+    /// </summary>
+    [Test]
+    public void DeleteOU_Success()
+    {
+        // A --> Setup
+        Result<ADSPath> newOuResult;
+        ADSPath         parentOu = asi.UnitTestParent;
+        string          ouName   = asi.Faker.Random.Word();
+
+        ADpOrgUnitProcessor ouProcessor = new ADpOrgUnitProcessor(asi.ADConnector.LdapConnection);
+
+        ADpOrgUnit ou = new(ouName, parentOu);
+        newOuResult = ouProcessor.AddNew(ou);
+        Assert.That(newOuResult.IsSuccess, Is.True, "[B-100]  Unable to create the unique containing OU for this test.  Errors: " + newOuResult.ToStringWithLineFeeds());
+
+        // C --> Act
+        string dn = ou.DistinguishedName;
+        Result<DeleteResponse>delResult = ouProcessor.Delete(dn);
+        
+        // V --> Verify
+        Assert.That(delResult.IsSuccess, Is.True, "[C-100]  Failed to delete the OU.  Errors: " + delResult.ToStringWithLineFeeds());
+
+        string       searchFilter       = ActiveDirectoryConnector.SEARCH_FILTER_ALL_OU;
+        
+        Result<List<ADpOrgUnit>> result = ouProcessor.Find(parentOu.Path, SearchScope.Subtree, searchFilter);
+        Assert.That(result.IsSuccess,Is.True, "[V-100]  Failed to find the OU in AD. Errors: " + result.ToStringWithLineFeeds());
+        Assert.That(result.Value.Count,Is.Zero,"[V-110]  OU still exists in AD after deletion.");
     }
     /*
 
