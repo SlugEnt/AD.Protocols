@@ -1,16 +1,9 @@
-﻿using SlugEnt.AD.Protocols;
+﻿using AD.Protocols.ADObjects;
+using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
 using SlugEnt.IS;
-using System;
-using System.Collections.Generic;
 using System.DirectoryServices.Protocols;
-using System.Formats.Asn1;
-using System.Text;
-using AD.Protocols;
-using AD.Protocols.ADObjects;
-using UT;
 using UT.CustomSupportObjects;
-using UT.SupportObjects;
 
 namespace Test.ADProtocols;
 

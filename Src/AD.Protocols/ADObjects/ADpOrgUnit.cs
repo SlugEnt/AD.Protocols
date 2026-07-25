@@ -1,34 +1,13 @@
-﻿
-using SlugEnt.AD.Protocols;
-using SlugEnt.AD.Protocols.Attributes;
+﻿using SlugEnt.AD.Protocols;
 using SlugEnt.IS;
-using System.DirectoryServices.Protocols;
 
 namespace AD.Protocols.ADObjects;
 
+/// <summary>
+/// Represents an AD Organization Unit object.  This is a Read/Write Object.
+/// </summary>
 public class ADpOrgUnit : ADpBaseObject
 {
-    /// <summary>
-    ///     This is the most preferred constructor if you have already read the user from AD as it almost 100% assuredly will
-    ///     pull the OU without error.
-    /// </summary>
-    /// <param name="readOnlyUser"></param>
-    public ADpOrgUnit(ADpReadOnlyOrgUnit orgUnit)
-    {
-        string? value = orgUnit.DistinguishedName;
-        if (string.IsNullOrEmpty(value))
-            throw new ArgumentNullException(nameof(value), "Distinguished Name cannot be null or empty.");
-
-        DistinguishedName = value;
-        DescriptionChg    = orgUnit.Description;
-        NameChg           = orgUnit.Name;
-        CommonNameChg     = orgUnit.Name;
-        ParentPath        = orgUnit.ParentPath;
-        IsNew             = false;
-        
-    }
-
-
     /// <summary>
     /// Creates a new organizational unit with the given name. You can override CommonName, DisplayName by
     /// setting the respective properties.
@@ -45,8 +24,8 @@ public class ADpOrgUnit : ADpBaseObject
         InCreationMode = true;
 
         ParentPath    = parentPath;
-        NameChg       = ouName;
-        CommonNameChg = ouName;
+        Name          = ouName;
+        CommonName    = ouName;
 
         IsNew          = true;
         InCreationMode = false;
@@ -90,42 +69,6 @@ public class ADpOrgUnit : ADpBaseObject
     {
         return $"OU={CommonName}";
     }
-
-
-    public DirectoryAttribute[] GetDirectoryAttributesNew()
-    {
-        DirectoryAttribute[]     attributes    = Array.Empty<DirectoryAttribute>();
-        List<DirectoryAttribute> dirAttributes = new List<DirectoryAttribute>();
-        dirAttributes.Add(new DirectoryAttribute("objectClass", ObjectClassName));
-
-        foreach (KeyValuePair<string, AttributeBase> attributeBase in AttributesToUpdate)
-        {
-            dirAttributes.Add(attributeBase.Value.DA);
-        }
-
-        return dirAttributes.ToArray();
-    }
-
     
-
-    public string? CommonNameChg
-    {
-        get => CommonName;
-        set => CommonName = value;
-    }
-
-    public string? DescriptionChg
-    {
-        get => Description;
-        set => Description = value;
-    }
-
-    // TODO remove this
-    public string? NameChg
-    {
-        get => Name;
-        set => Name = value;
-
-    }
 }
 

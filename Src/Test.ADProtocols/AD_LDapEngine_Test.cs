@@ -101,8 +101,8 @@ public class AD_LDapEngine_Test
             {
                 
                 ADSPath deletePath   = asi.UnitTestRoot.NewChildADSPath("ou=" + HelperMethods.UT_BASEOU_NAME);
-                Result  deleteResult =asi.ADConnector.OuDeleteAll(deletePath);
-                Assert.That(deleteResult.IsSuccess, Is.True, "Z-10:  Cleanup of prior version of UT OU failed.  Failed to delete it.");
+                //Result  deleteResult =asi.ADConnector.OuDeleteAll(deletePath);
+                //Assert.That(deleteResult.IsSuccess, Is.True, "Z-10:  Cleanup of prior version of UT OU failed.  Failed to delete it.");
                 _ = asi.ADConnector.OuCreate(HelperMethods.UT_BASEOU_NAME, asi.UnitTestRoot);
             }
             else

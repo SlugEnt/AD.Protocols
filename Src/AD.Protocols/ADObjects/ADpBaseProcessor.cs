@@ -60,7 +60,7 @@ public abstract class ADpBaseProcessor
     /// </summary>
     /// <param name="distinguishedName"></param>
     /// <returns></returns>
-    public Result<DeleteResponse> Delete (string distinguishedName)
+    public Result<DeleteResponse> Delete (string distinguishedName, bool recursiveDeleteChildren = false)
     {
         if (_ldapConnection == null)
             return Result.Fail<DeleteResponse>("The LDAP Connection has not been set.  Cannot delete object.");
@@ -68,6 +68,19 @@ public abstract class ADpBaseProcessor
         try
         {
             DeleteRequest  deleteRequest  = new(distinguishedName);
+
+            if (recursiveDeleteChildren)
+            {
+                DirectoryControl directoryControl = new DirectoryControl(
+                
+                    "1.2.840.113556.1.4.805",
+                    null,
+                    true,
+                    true
+                    );
+                deleteRequest.Controls.Add(directoryControl);
+            }
+            
             DeleteResponse deleteResponse = (DeleteResponse)_ldapConnection.SendRequest(deleteRequest);
             if (deleteResponse.ResultCode == ResultCode.Success)
             {
@@ -250,6 +263,15 @@ public abstract class ADpBaseProcessor
     }
 
 
+    /// <summary>
+    /// Simple means of creating objects in Active Directory.  It does nothing more than create an
+    /// object of the requested class with the requested name in the requested parent path.  It does not set any attributes on the object.
+    /// </summary>
+    /// <param name="name">Name to be given to the object</param>
+    /// <param name="parentPath">Path where the object is to be created in</param>
+    /// <param name="objectClass">Type of object, ie, person, group, user, etc</param>
+    /// <param name="distinguishedNamePrefix">The prefix that identifies this object.  Is ObjectClass specific</param>
+    /// <returns></returns>
     public Result CreateSimple(string name, ADSPath parentPath, string objectClass,string distinguishedNamePrefix = "cn" )
     {
         try

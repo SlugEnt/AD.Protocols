@@ -4,6 +4,7 @@ using System.DirectoryServices.Protocols;
 using System.Text;
 using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
+using SlugEnt.IS;
 
 namespace AD.Protocols.ADObjects;
 
@@ -44,6 +45,13 @@ public class ADpOrgUnitProcessor : ADpGenericProcessor<ADpOrgUnit>
 
     }
 
+
+    public Result<List<ADpOrgUnit>> GetAllChildOrgUnits(ADSPath parentDn)
+    {
+        string searchFilter = $"(&(objectClass={ADpCommon.OBJ_CLASS_ORGUNIT}))";
+        Result<List<ADpOrgUnit>> result = Find(parentDn.Path, SearchScope.OneLevel, searchFilter);
+        return result;
+    }
 
     /// <summary>
     /// OU's do not use CN as the name attribute, they use OU.
