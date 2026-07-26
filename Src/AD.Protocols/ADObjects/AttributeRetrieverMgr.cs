@@ -70,10 +70,5 @@ public class AttributeRetrieverMgr
         _attributesToReturn = _attributesToRetrieve.ToArray();
         IsFinalized = true;
     }
-    
-    
-
-    
-    
 }
 

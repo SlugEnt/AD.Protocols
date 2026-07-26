@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel;
+using AD.Protocols.ADObjects;
 using Bogus;
 using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
-using SlugEnt.IS;
 using UT.SupportObjects;
 
 namespace UT.CustomSupportObjects;
@@ -77,9 +77,14 @@ public class Ad_SupportInitializer
     public Faker Faker => _faker!;
 
 
-
+    /// <summary>
+    /// The actual folder that all unit tests are created under
+    /// </summary>
     public ADSPath UnitTestParent { get; private set; }
 
+    /// <summary>
+    /// This is the root folder for all unit tests.  You should not be needing it for any tests.
+    /// </summary>
     public ADSPath UnitTestRoot { get; private set; }
 
     /*

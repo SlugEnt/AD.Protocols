@@ -1,7 +1,8 @@
 ﻿using SlugEnt.AD.Protocols;
 using SlugEnt.AD.Protocols.Attributes;
 using System.DirectoryServices.Protocols;
-using SlugEnt.IS;
+using AD.Protocols.ADObjects;
+
 
 namespace AD.Protocols;
 

@@ -1,6 +1,7 @@
 ﻿using SlugEnt.FluentResults;
 using System.DirectoryServices.Protocols;
-using SlugEnt.IS;
+using AD.Protocols.ADObjects;
+
 
 namespace SlugEnt.AD.Protocols;
 

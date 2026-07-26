@@ -1,7 +1,8 @@
 ﻿using SlugEnt.AD.Protocols.Attributes;
 using SlugEnt.FluentResults;
-using SlugEnt.IS;
+using AD.Protocols.ADObjects;
 using System.DirectoryServices.Protocols;
+using System.Runtime.CompilerServices;
 using System.Xml.Linq;
 
 namespace AD.Protocols.ADObjects;
@@ -146,7 +147,10 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
             if (obj.IsNew)
                 if (obj.DistinguishedName == null || obj.DistinguishedName == string.Empty)
                     obj.BuildDistinguishedName();
-            
+
+            // Perform any final Pre-Save processing on the object before saving to AD.
+            obj.SyncPreSave();
+
             // Retrieve the Directory Attributes to save to AD.
             DirectoryAttribute[] attributesToLoad = obj.GetDirectoryAttributesNew();
             AddRequest           addRequest       = new(obj.DistinguishedName, attributesToLoad);
@@ -182,23 +186,24 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
     /// <param name="distinguishedName"></param>
     /// <returns></returns>
     public Result<T> Get(string distinguishedName)
-    {
+    { 
         Result<SearchResultEntryCollection> result = GetSingle(distinguishedName);
+
         if (result.IsFailed)
         {
             return Result.Fail(result.Errors);
         }
-        if (result.Value.Count == 0)
+
+        try
         {
-            return Result.Fail($"No {ObjectEnglishName} found.");
+            T x = (T)Activator.CreateInstance(typeof(T), result.Value[0].Attributes);
+
+            // Return the object.
+            return Result.Ok(x);
         }
-
-        Result<T> objResult = CreateObjectFromAttributes(result.Value[0].Attributes);
-        if (objResult.IsFailed)
-            return Result.Fail(objResult.ToStringErrorOnly());
-
-        // Return the object.
-        return Result.Ok(objResult.Value);
+        catch(Exception  ex) {
+            return Result.Fail(new ExceptionalError($"Failed to Create the new object - {ObjectEnglishName}: " + ex.Message, ex));
+        }
     }
 
 
@@ -286,6 +291,9 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
     {
         try
         {
+            // Perform any Object Pre-Save processing on the object before saving to AD.
+            obj.SyncPreSave();
+            
             DirectoryAttributeModification[] modifications = new DirectoryAttributeModification[obj.AttributesToUpdate.Count];
             int i = 0;
 

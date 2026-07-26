@@ -2,7 +2,7 @@
 using System.DirectoryServices.Protocols;
 using SlugEnt.AD.Protocols;
 using SlugEnt.AD.Protocols.Attributes;
-using SlugEnt.IS;
+
 
 namespace AD.Protocols.ADObjects;
 
@@ -75,6 +75,7 @@ public abstract class ADpBaseObject
     }
 
     
+    
     /// <summary>
     /// Builds the prefix for the distinguished name of the object.  Some objects use a prefix other than cn.
     /// </summary>
@@ -84,7 +85,7 @@ public abstract class ADpBaseObject
         return $"CN={CommonName}";
     }
 
-
+    
     /// <summary>
     /// Builds the value for the Distinguished Name of the object.
     /// </summary>
@@ -92,6 +93,15 @@ public abstract class ADpBaseObject
     {
         DistinguishedName = string.Join(",", BuildDistinguishedNamePrefix(), ParentPath);
     }
+
+
+    /// <summary>
+    /// Some objects have complicated values (for instance - user with UserAccountControl) that need to be synchronized
+    /// or have other changes made to the core object before saving.  This method is called before saving the object to Active Directory
+    /// to allow the derived object to perform any necessary pre-save operations.
+    /// </summary>
+    /// <remarks>Is Internal because Processors need access to this.</remarks>
+    internal virtual void SyncPreSave() { }
     
     
     /// <summary>
@@ -113,13 +123,7 @@ public abstract class ADpBaseObject
     }
 
     #region "Retrieval Attributes"
-        
-    /// <summary>
-    /// Method that derived classes must implement to set default attributes to be retrieved from AD if none are specifically specified.
-    /// </summary>
-    /// <param name="attributeRetrieverMgr"></param>
-    //internal abstract void AddDefaultRetrievalAttributes(AttributeRetrieverMgr attributeRetrieverMgr);
-
+    
 
     #endregion
 

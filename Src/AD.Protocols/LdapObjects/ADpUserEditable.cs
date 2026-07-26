@@ -138,17 +138,7 @@ public class ADpUserEditable
     /// </summary>
     protected bool IsNew { get; set; }
 
-    /// <summary>
-    ///     The account enable flag will be null by default - meaning it is unknown.  If the ADpUserFromAD_RO included the UAC
-    ///     value then it will be
-    ///     set appropriately to true or false.
-    /// </summary>
-    /*public bool? AccountEnable
-    {
-        get => _accountEnable;
-        set => _accountEnable = value;
-    }
-    */
+
 
     /// <summary>
     /// The CN or common name of the user in AD.

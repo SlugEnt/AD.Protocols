@@ -1,9 +1,9 @@
 ﻿using Bogus.DataSets;
 using SlugEnt.AD.Protocols.Attributes;
 using SlugEnt.AD.Protocols;
-using SlugEnt.IS;
 using System.DirectoryServices.Protocols;
 using System.Text;
+using AD.Protocols.ADObjects;
 using UT.CustomSupportObjects;
 using UT.SupportObjects;
 using SlugEnt.FluentResults;

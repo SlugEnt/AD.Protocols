@@ -4,8 +4,9 @@ using SlugEnt.FluentResults;
 using System.DirectoryServices.Protocols;
 using System.Net;
 using AD.Protocols;
+using AD.Protocols.ADObjects;
 using SlugEnt.AD.Protocols.Attributes;
-using SlugEnt.IS;
+
 using SearchOption = System.DirectoryServices.Protocols.SearchOption;
 
 namespace SlugEnt.AD.Protocols;

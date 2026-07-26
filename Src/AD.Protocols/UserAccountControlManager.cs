@@ -35,6 +35,7 @@ public enum EnumUserAccountControlFlags
 /// <summary>
 ///     Class to manage Active Directory UserAccountControl attribute
 /// </summary>
+[Obsolete]
 public class UserAccountControlManager
 {
     /// <summary>

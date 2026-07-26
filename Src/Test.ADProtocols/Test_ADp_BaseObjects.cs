@@ -2,7 +2,7 @@
 using AD.Protocols;
 using AD.Protocols.ADObjects;
 using SlugEnt.AD.Protocols.Attributes;
-using SlugEnt.IS;
+
 using UT.CustomSupportObjects;
 
 namespace Test.ADProtocols;
@@ -104,6 +104,45 @@ public class Test_ADp_BaseObjects
         // Act - Verify that retrieving Attributes after clearing still works and is empty
         string[] attributes = attributeRetrieverMgr.Attributes;
         Assert.That(attributes.Length, Is.EqualTo(0), "[V_260] Length should be 0 after clear.");
+    }
+
+
+    [Test]
+    public void UserAccountControl_HasChangedValue_ReturnsTrueWhenValueChanged()
+    {
+        // A --> Setup
+        var uac = new UserAccountControl();
+
+        // B --> Setup Verify
+        Assert.That(uac.Value, Is.EqualTo(0), "[B_100] Initial value should be equal to the provided initial value.");
+
+        // C --> Act
+        uac.DisableAccount();
+
+        // V --> Verify
+        Assert.That(uac.Value, Is.EqualTo((int)UserAccountControl.UserAccountControlFlags.AccountDisabled), "[V_100] Value should be 0 after enabling account.");
+        Assert.That(uac.HasChangedValue, Is.True, "[V_110] Should report changed when AccountEnabled is set.");
+    }
+
+    
+    [TestCase(10000)]
+    [TestCase(20)]
+    [Test]
+    public void UserAccountControl_WithInitializedValue_ReturnsTrueWhenValueChanged(int initialValue)
+    {
+        // A --> Setup
+        var uac = new UserAccountControl(initialValue);
+
+        // B --> Setup Verify
+        Assert.That(uac.Value, Is.EqualTo(initialValue), "[B_100] Initial value should be equal to the provided initial value.");
+        Assert.That(uac.HasChangedValue,Is.False,"[B_110] Should not report changed when initialized value is set.");
+
+        // C --> Act
+        uac.DisableAccount();
+
+        // V --> Verify
+        Assert.That(uac.Value, Is.Not.EqualTo(initialValue), "[V_100] Value should be different after disabling account.");
+        Assert.That(uac.HasChangedValue, Is.True, "[V_110] Should report changed when AccountEnabled is set.");
     }
 
 }

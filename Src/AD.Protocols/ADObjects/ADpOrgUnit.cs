@@ -1,5 +1,6 @@
 ﻿using SlugEnt.AD.Protocols;
-using SlugEnt.IS;
+
+using System.DirectoryServices.Protocols;
 
 namespace AD.Protocols.ADObjects;
 
@@ -31,6 +32,35 @@ public class ADpOrgUnit : ADpBaseObject
         InCreationMode = false;
     }
 
+
+    /// <summary>
+    ///  Creates an Org Unit from a set of Active Directory Attributes.
+    /// </summary>
+    /// <param name="attributes"></param>
+    public ADpOrgUnit(SearchResultAttributeCollection attributes)
+    {
+        InCreationMode = true;
+
+        foreach (DirectoryAttribute dirObj in attributes.Values)
+        {
+            switch (dirObj.Name)
+            {
+                case "description": Description = dirObj[0].ToString(); break;
+                case "distinguishedName":
+                    DistinguishedName = dirObj[0].ToString();
+                    break;
+                case "whenChanged": WhenChanged = ADFunctions.GetDateTime_FromLDAPProperty(dirObj[0].ToString()!); break;
+                case "whenCreated": WhenCreated = ADFunctions.GetDateTime_FromLDAPProperty(dirObj[0].ToString()!); break;
+                case "name":        Name        = dirObj[0].ToString(); break;
+            }
+        }
+
+        if (DistinguishedName == null | DistinguishedName == string.Empty)
+            throw new ArgumentException("No Distinguished Name found in the orgUnit object.  Anytime you retrieve an object from Active Directory you must retrieve this attribute.");
+
+        InCreationMode = false;
+    }
+    
     
     /// <summary>
     /// Starts the process of creating a new OU.
@@ -39,6 +69,7 @@ public class ADpOrgUnit : ADpBaseObject
     public ADpOrgUnit (string ouName ) : base(ouName)
     {}
 
+    
     /// <summary>
     /// The object class of this Object.
     /// </summary>
@@ -69,6 +100,6 @@ public class ADpOrgUnit : ADpBaseObject
     {
         return $"OU={CommonName}";
     }
-    
+
 }
 

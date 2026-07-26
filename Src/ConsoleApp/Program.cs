@@ -1,10 +1,8 @@
 ﻿
+using AD.Protocols.ADObjects;
 using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
-using SlugEnt.IS;
 using System.DirectoryServices.Protocols;
-using System.Security.Cryptography;
-using System.Xml.XPath;
 
 
 public class Program

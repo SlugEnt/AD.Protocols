@@ -1,0 +1,586 @@
+﻿
+using SlugEnt.AD.Protocols;
+using SlugEnt.AD.Protocols.Attributes;
+using SlugEnt.FluentResults;
+using AD.Protocols.ADObjects;
+using System.DirectoryServices.Protocols;
+using System.Text;
+
+namespace AD.Protocols.ADObjects;
+
+public class ADpUser : ADpBaseObject
+{
+    private byte[] _password = [];
+    
+    public ADpUser(string name, ADSPath parentPath)
+    {
+        {
+            if (string.IsNullOrEmpty(name))
+                throw new ArgumentNullException(nameof(name));
+
+            
+            InCreationMode = true;
+
+            UserAccountControlSetter = new UserAccountControl();
+            ParentPath               = parentPath;
+            Name                     = name;
+
+            IsNew          = true;
+            InCreationMode = false;
+        }
+    }
+    
+
+    /// <summary>
+    ///  Creates a User from a set of Active Directory Attributes.
+    /// </summary>
+    /// <param name="attributes"></param>
+    public ADpUser(SearchResultAttributeCollection attributes)
+    {
+        InCreationMode = true;
+
+        bool samAccountFound = false;
+        bool upnFound = false;
+
+        foreach (DirectoryAttribute dirObj in attributes.Values)
+        {
+            int ival;
+
+            switch (dirObj.Name)
+            {
+                case "sAMAccountName":
+                    samAccountFound = true;
+                    SAMAccount      = dirObj[0].ToString();
+                    break;
+                case "distinguishedName": DistinguishedName = dirObj[0].ToString(); break;
+                case "cn":                CommonName        = dirObj[0].ToString(); break;
+                case "displayName":       DisplayName       = dirObj[0].ToString(); break;
+                case "givenName":         FirstName         = dirObj[0].ToString(); break;
+                case "sn":                LastName          = dirObj[0].ToString(); break;
+                case "title":             Title             = dirObj[0].ToString(); break;
+                case "userPrincipalName":
+                    upnFound = true;
+                    UPN      = dirObj[0].ToString();
+                    break;
+                case "department":      DepartmentFullName = dirObj[0].ToString(); break;
+                case "mail":            Email              = dirObj[0].ToString(); break;
+                case "manager":         Manager            = dirObj[0].ToString(); break;
+                case "telephoneNumber": Phone              = dirObj[0].ToString(); break;
+                case "description":     Description        = dirObj[0].ToString(); break;
+                case "memberOf":
+                    for (int i = 0; i < dirObj.Count; i++)
+                    {
+                        MemberOf.Add(dirObj[i].ToString());
+                    }
+
+                    break;
+                case "userAccountControl":
+                    if (!int.TryParse(dirObj[0].ToString(), out ival))
+                    {
+                        throw new ArgumentException("DA is not a int value - key [" + dirObj.Name + "] value: [" + dirObj[0]! + "]");
+                    }
+
+                    UserAccountControlSetter = new UserAccountControl(ival);
+                    break;
+
+                case "lastLogon":   LastLogon   = ADFunctions.GetDateTime_FromLDAPPropertyLong(dirObj[0].ToString()!); break;
+                case "whenChanged": WhenChanged = ADFunctions.GetDateTime_FromLDAPProperty(dirObj[0].ToString()!); break;
+                case "whenCreated": WhenCreated = ADFunctions.GetDateTime_FromLDAPProperty(dirObj[0].ToString()!); break;
+                case "badPwdCount":
+                    if (!int.TryParse(dirObj[0].ToString(), out ival))
+                    {
+                        throw new ArgumentException("DA is not an integer value - key [" + dirObj.Name + "] value: [" + dirObj[0]! + "]");
+                    }
+
+                    BadPasswordCount = ival;
+                    break;
+                case "badPasswordTime": BadPasswordDateTime = ADFunctions.GetDateTime_FromLDAPPropertyLong(dirObj[0].ToString()); break;
+                case "lockoutTime":     LockOutDateTime     = ADFunctions.GetDateTime_FromLDAPPropertyLong(dirObj[0].ToString()); break;
+                case "lockoutDuration":
+                    if (!long.TryParse(dirObj[0].ToString(), out long lval))
+                    {
+                        throw new ArgumentException("DA is not a long value - key [" + dirObj.Name + "] value: [" + dirObj[0] + "]");
+                    }
+
+                    LockOutDurationNS = lval;
+                    break;
+                case "pwdLastSet": PasswordLastSet = ADFunctions.GetDateTime_FromLDAPPropertyLong(dirObj[0].ToString()); break;
+                case "msDS-UserPasswordExpiryTimeComputed":
+                    // This is a special case for the msDS-UserPasswordExpiryTimeComputed attribute
+                    // which is stored as a long value representing ticks.
+
+                    if (!long.TryParse(dirObj[0].ToString(), out long ticks))
+                    {
+                        throw new ArgumentException("DA is not a long value - key [" + dirObj.Name + "] value: [" + dirObj[0] + "]");
+                    }
+
+                    // This is equivalent to Hex: 0x7fffffffffffffff which means it is set to never expire.  We have to set it to something
+                    // so we set to maximum date value...
+                    if (ticks == 9223372036854775807)
+                        PasswordExpiryDateTime = DateTimeOffset.MaxValue;
+                    else
+                        PasswordExpiryDateTime = ADFunctions.GetDateTime_FromLDAPPropertyLong(dirObj[0].ToString());
+
+                    // TODO Remove this line.  It is not needed anymore...???
+                    //PasswordExpiryDateTime = new DateTime(ticks);
+                    //if (PasswordExpiryDateTime < DateTime.Now)
+                    //                        IsPasswordExpired = true;
+                    break;
+
+
+            }
+        }
+    
+        
+        if (DistinguishedName == null | DistinguishedName == string.Empty)
+            throw new
+                ArgumentException("No Distinguished Name found in the orgUnit object.  Anytime you retrieve an object from Active Directory you must retrieve this attribute.");
+
+        InCreationMode = false;
+    }
+
+
+
+    /// <summary>
+    /// Constructor that starts the process of creating a new user.
+    /// </summary>
+    /// <param name="name"></param>
+    public ADpUser(string name) : base(name)
+    {
+        IsNew              = true;
+        UserAccountControlSetter = new UserAccountControl();
+    }
+
+
+    /// <summary>
+    /// Constructor for creating an ADpUser object from an existing AD object.  This
+    /// will set the InCreationMode to true so that the attributes are not added to the
+    /// modified list during initial setting.
+    /// </summary>
+    internal ADpUser() : base()
+    { }
+
+    
+    /// <summary>
+    /// The object class of this object.
+    /// </summary>
+    public override string ObjectClassName
+    {
+        get { return ADpCommon.OBJ_CLASS_USER; }
+    }
+
+
+    /// <summary>
+    /// Used in prompts and error messages to name the object type we are working with,
+    /// </summary>
+    public override string ObjectTypeDescription
+    {
+        get { return "user"; }
+    }
+
+
+    /// <summary>
+    /// Some objects have complicated values (for instance - user with UserAccountControl) that need to be synchronized
+    /// or have other changes made to the core object before saving.  This method is called before saving the object to Active Directory
+    /// to allow the derived object to perform any necessary pre-save operations.
+    /// </summary>
+    /// <remarks>Is Internal because Processors need access to this.</remarks>
+    internal override void SyncPreSave()
+    {
+        // See if UserAccountControl has been changed.  If so, we need to add it to the Attributes To Update List
+        if (UserAccountControlSetter.HasChangedValue)
+        {
+            string key = ADpCommon.ATN_USER_ACCOUNT_CONTROL;
+            AttrUserAccountControl attrValue = new(UserAccountControlSetter.Value, EnumAttributeOperation.Modify);
+            if (!AttributesToUpdate.TryAdd(key, attrValue))
+            {
+                AttributesToUpdate[key] = attrValue;
+            }
+        }
+        base.SyncPreSave();     
+    }
+
+
+    #region Info Attributes
+
+
+    /// <summary>
+    /// All the groups a user is a member of.
+    /// </summary>
+    public HashSet<string> MemberOf { get; protected set; } = [];
+
+
+    /// <summary>
+    /// Number of bad passwords entered by the user.  This is reset when a valid password is entered.
+    /// </summary>
+    public int BadPasswordCount { get; protected set; }
+
+    /// <summary>
+    ///    Date and Time of the last bad password attempt by the user.
+    /// </summary>
+    public DateTimeOffset BadPasswordDateTime { get; protected set; }
+
+    
+    /// <summary>
+    ///   Date and Time of the last logon by the user.
+    /// </summary>
+    public DateTimeOffset LastLogon { get; protected set; }
+
+
+    /// <summary>
+    ///   Date and Time the user account was locked out in Active Directory.
+    /// </summary>
+    public DateTimeOffset LockOutDateTime { get; protected set; }
+
+    /// <summary>
+    ///     Amount of time Account has been locked out in nano seconds.
+    /// </summary>
+    public long LockOutDurationNS { get; protected set; }
+
+
+
+    /// <summary>
+    /// Date and Time the password will expire.  This is computed based on the password policy in Active Directory.  
+    /// </summary>
+    public DateTimeOffset PasswordExpiryDateTime { get; protected set; }
+
+
+
+    /// <summary>
+    /// The date the user's password will expire.  This is not an updatable field.  It is calculated based on the password policy that applies for the user.
+    /// </summary>
+    public DateTimeOffset PasswordExpiration { get; private set; }
+
+
+    #endregion
+
+    #region Attributes
+
+    /// <summary>
+    /// Full Name of the Department.
+    /// </summary>
+    public string DepartmentFullName
+    {
+        get;
+        set
+        {
+            field = value;
+
+            // Do not add attribute to modification list if in initial creation mode.
+            if (InCreationMode)
+                return;
+
+            string         key       = ADpCommon.ATN_DEPARTMENT;
+            AttrDepartment attrValue = new(value, EnumAttributeOperation.Modify);
+            if (!AttributesToUpdate.TryAdd(key, attrValue))
+            {
+                AttributesToUpdate[key] = attrValue;
+            }
+        }
+    }
+
+
+    /// <summary>
+    /// The Display Name of the User.  This is the name that will be displayed in the address book and other places.
+    /// </summary>
+    public string DisplayName
+    {
+        get;
+        set
+        {
+            field = value;
+
+
+            // Do not add attribute to modification list if in initial creation mode.
+            if (InCreationMode)
+                return;
+
+            string          key       = ADpCommon.ATN_DISPLAYNAME;
+            AttrDisplayName attrValue = new(value, EnumAttributeOperation.Modify);
+            if (!AttributesToUpdate.TryAdd(key, attrValue))
+            {
+                AttributesToUpdate[key] = attrValue;
+            }
+        }
+    }
+
+
+    /// <summary>
+    /// The Email Address of the User.  This is the email address that will be used in the address book and other places.
+    /// </summary>
+    public string Email
+    {
+        get;
+        set
+        {
+            field = value;
+
+            // Do not add attribute to modification list if in initial creation mode.
+            if (InCreationMode)
+                return;
+
+            string    key       = ADpCommon.ATN_EMAIL;
+            AttrEmail attrValue = new(value, EnumAttributeOperation.Modify);
+            if (!AttributesToUpdate.TryAdd(key, attrValue))
+            {
+                AttributesToUpdate[key] = attrValue;
+            }
+        }
+    }
+
+    
+    /// <summary>
+    /// The First Name of the User.  This is the name that will be used in the address book and other places.
+    /// </summary>
+    public string FirstName
+    {
+        get;
+        set
+        {
+            field = value;
+
+            // Do not add attribute to modification list if in initial creation mode.
+            if (InCreationMode)
+                return;
+
+            string        key       = ADpCommon.ATN_FIRSTNAME;
+            AttrFirstName attrValue = new(value, EnumAttributeOperation.Modify);
+            if (!AttributesToUpdate.TryAdd(key, attrValue))
+            {
+                AttributesToUpdate[key] = attrValue;
+            }
+        }
+    }
+
+
+    /// <summary>
+    /// The Last Name of the User.  This is the name that will be used in the address book and other places.
+    /// </summary>
+    public string LastName  
+    {
+        get;
+        set
+        {
+            field = value;
+
+            // Do not add attribute to modification list if in initial creation mode.
+            if (InCreationMode)
+                return;
+
+            string       key       = ADpCommon.ATN_LASTNAME;
+            AttrLastName attrValue = new(value, EnumAttributeOperation.Modify);
+            if (!AttributesToUpdate.TryAdd(key, attrValue))
+            {
+                AttributesToUpdate[key] = attrValue;
+            }
+        }
+    }
+
+    
+    /// <summary>
+    /// The Manager of the User.  This is the name that will be used in the address book and other places.
+    /// </summary>
+    public string Manager
+    {
+        get;
+        set
+        {
+            field = value;
+
+            // Do not add attribute to modification list if in initial creation mode.
+            if (InCreationMode)
+                return;
+
+            string      key       = ADpCommon.ATN_MANAGER;
+            AttrManager attrValue = new(value, EnumAttributeOperation.Modify);
+            if (!AttributesToUpdate.TryAdd(key, attrValue))
+            {
+                AttributesToUpdate[key] = attrValue;
+            }
+        }
+    }
+
+
+    /// <summary>
+    /// The Password of the User.  This is the password that will be used to log in to the system.
+    /// </summary>
+    public string Password          
+    {
+        set
+        {
+            _password = Encoding.Unicode.GetBytes("\"" + value + "\"");
+            
+            // Do not add attribute to modification list if in initial creation mode.
+            if (InCreationMode)
+                return;
+
+            string           key       = ADpCommon.ATN_PASSWORD;
+            AttrUserPassword attrValue = new(_password, EnumAttributeOperation.Modify);
+            if (!AttributesToUpdate.TryAdd(key, attrValue))
+            {
+                AttributesToUpdate[key] = attrValue;
+            }
+        }
+    }
+
+
+    /// <summary>
+    /// Sets the User Password Last Set Value.  Can only set it to 0 Ticks (Expired now) OR DateTimeOffset.MaxValue (never expires).
+    /// </summary>
+    public DateTimeOffset PasswordLastSet
+    {
+        get;
+        set
+        {
+            if (InCreationMode)
+            {
+                field = value;
+
+                // Do not add attribute to modification list if in initial creation mode.
+                return;
+            }
+            
+            if (value != DateTimeOffset.MinValue && value != DateTimeOffset.MaxValue)
+                throw new ArgumentException("PasswordLastSet can only be set to 0 Ticks (Expired now) OR DateTimeOffset.MaxValue (never expires)", nameof(value));
+
+            // Convert DateTime offset to date time but in UTC Time.
+            DateTime utc = value.UtcDateTime;
+            field = utc;
+
+            string              key       = ADpCommon.ATN_PASSWORD_LAST_SET;
+            AttrPasswordLastSet attrValue = new(utc, EnumAttributeOperation.Modify);
+            if (!AttributesToUpdate.TryAdd(key, attrValue))
+            {
+                AttributesToUpdate[key] = attrValue;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The Phone Number of the User.  This is the phone number that will be used in the address book and other places.
+    /// </summary>
+    public string Phone
+    {
+        get;
+        set
+        {
+            field = value;
+
+            // Do not add attribute to modification list if in initial creation mode.
+            if (InCreationMode)
+                return;
+
+            string        key       = ADpCommon.ATN_PHONE;
+            AttrWorkPhone attrValue = new(value, EnumAttributeOperation.Modify);
+            if (!AttributesToUpdate.TryAdd(key, attrValue))
+            {
+                AttributesToUpdate[key] = attrValue;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The User's Title.  This is a free form text field that can be used to describe the user's job title.
+    /// </summary>
+    public string Title
+    {
+        get;
+        set
+        {
+            field = value;
+
+            // Do not add attribute to modification list if in initial creation mode.
+            if (InCreationMode)
+                return;
+
+            string    key       = ADpCommon.ATN_TITLE;
+            AttrTitle attrValue = new(value, EnumAttributeOperation.Modify);
+            if (!AttributesToUpdate.TryAdd(key, attrValue))
+            {
+                AttributesToUpdate[key] = attrValue;
+            }
+        }
+    }
+
+
+    /// <summary>
+    ///     Universal Principal Name.  This is the email address of the user and is used to identify the user in Active
+    ///     Directory.
+    /// </summary>
+    public string UPN
+    {
+        get;
+        set
+        {
+            field = value;
+
+            // Do not add attribute to modification list if in initial creation mode.
+            if (InCreationMode)
+                return;
+
+            string  key       = ADpCommon.ATN_UPN;
+            AttrUPN attrValue = new(value, EnumAttributeOperation.Modify);
+            if (!AttributesToUpdate.TryAdd(key, attrValue))
+            {
+                AttributesToUpdate[key] = attrValue;
+            }
+        }
+    }
+
+    /// <summary>
+    /// SAMAccount Id
+    /// </summary>
+    public string SAMAccount
+    {
+        get;
+        set
+        {
+            field = value;
+
+            // Do not add attribute to modification list if in initial creation mode.
+            if (InCreationMode)
+                return;
+
+            string         key       = ADpCommon.ATN_SAM;
+            AttrSamAccount attrValue = new(value, EnumAttributeOperation.Modify);
+            if (!AttributesToUpdate.TryAdd(key, attrValue))
+            {
+                AttributesToUpdate[key] = attrValue;
+            }
+        }
+    }
+
+    
+    /// <summary>
+    ///  User Account Control value.  Which is actually a bunch of flags that create the value.
+    /// </summary>
+    public int UserAccountControl
+    {
+        get;
+        set
+        {
+            field = value;
+
+            // Do not add attribute to modification list if in initial creation mode.
+            if (InCreationMode)
+                return;
+
+            string         key       = ADpCommon.ATN_USER_ACCOUNT_CONTROL;
+            AttrUserAccountControl attrValue = new(value, EnumAttributeOperation.Modify);
+            if (!AttributesToUpdate.TryAdd(key, attrValue))
+            {
+                AttributesToUpdate[key] = attrValue;
+            }
+        }
+    }
+
+    #endregion
+
+
+        /// <summary>
+        /// Provides access to the UserAccountControl object which allows user to manipulate / view all the components
+        /// that make up this value.
+        /// </summary>
+    public UserAccountControl UserAccountControlSetter { get; }
+}
+

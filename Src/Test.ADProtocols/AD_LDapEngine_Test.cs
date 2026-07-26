@@ -4,10 +4,11 @@ using SlugEnt;
 using SlugEnt.FluentResults;
 using SlugEnt.AD.Protocols;
 using SlugEnt.AD.Protocols.Attributes;
-using SlugEnt.IS;
+ 
 using System.DirectoryServices.Protocols;
 using System.Formats.Asn1;
 using System.Text;
+using AD.Protocols.ADObjects;
 using UT.CustomSupportObjects;
 using UT.SupportObjects;
 

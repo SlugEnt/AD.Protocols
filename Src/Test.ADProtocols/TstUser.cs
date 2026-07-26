@@ -1,8 +1,8 @@
 ﻿using Bogus;
 using SlugEnt;
 using SlugEnt.FluentResults;
-using SlugEnt.IS;
 using System.DirectoryServices.Protocols;
+using AD.Protocols.ADObjects;
 using SlugEnt.AD.Protocols;
 using SlugEnt.AD.Protocols.Attributes;
 

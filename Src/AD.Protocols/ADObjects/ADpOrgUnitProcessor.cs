@@ -1,13 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.DirectoryServices.Protocols;
-using System.Text;
-using SlugEnt.AD.Protocols;
+﻿using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
-using SlugEnt.IS;
+using AD.Protocols.ADObjects;
+using System.DirectoryServices.Protocols;
 
 namespace AD.Protocols.ADObjects;
 
+/// <summary>
+/// Provides the ability to perform CRUD operations on Active Directory in regards to Organizational Units.
+/// </summary>
 public class ADpOrgUnitProcessor : ADpGenericProcessor<ADpOrgUnit>
 {
     /// <summary>
@@ -18,34 +18,16 @@ public class ADpOrgUnitProcessor : ADpGenericProcessor<ADpOrgUnit>
 
     protected override Result<ADpOrgUnit> CreateObjectFromAttributes(SearchResultAttributeCollection attributes)
     {
-        ADpOrgUnit orgUnit                = new();
-        bool               distinguishedNameFound = false;
-
-        foreach (DirectoryAttribute dirObj in attributes.Values)
-        {
-            switch (dirObj.Name)
-            {
-                case "description": orgUnit.Description = dirObj[0].ToString(); break;
-                case "distinguishedName":
-                    orgUnit.DistinguishedName = dirObj[0].ToString();
-                    distinguishedNameFound    = true;
-                    break;
-                case "whenChanged": orgUnit.WhenChanged = ADFunctions.GetDateTime_FromLDAPProperty(dirObj[0].ToString()!); break;
-                case "whenCreated": orgUnit.WhenCreated = ADFunctions.GetDateTime_FromLDAPProperty(dirObj[0].ToString()!); break;
-                case "name":        orgUnit.Name        = dirObj[0].ToString(); break;
-            }
-        }
-
-        if (!distinguishedNameFound)
-        {
-            return Result.Fail<ADpOrgUnit>("No Distinguished Name found in the orgUnit object.  It is a required attribute.");
-        }
-
+        ADpOrgUnit orgUnit                = new(attributes);
         return Result.Ok(orgUnit);
-
     }
 
 
+    /// <summary>
+    /// Retrieves all Children OU's under the parent OU.  Does Not recurse.
+    /// </summary>
+    /// <param name="parentDn"></param>
+    /// <returns></returns>
     public Result<List<ADpOrgUnit>> GetAllChildOrgUnits(ADSPath parentDn)
     {
         string searchFilter = $"(&(objectClass={ADpCommon.OBJ_CLASS_ORGUNIT}))";
