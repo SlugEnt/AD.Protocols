@@ -104,27 +104,10 @@ public class ADpUser : ADpBaseObject
                     break;
                 case "pwdLastSet": PasswordLastSet = ADFunctions.GetDateTime_FromLDAPPropertyLong(dirObj[0].ToString()); break;
                 case "msDS-UserPasswordExpiryTimeComputed":
-                    // This is a special case for the msDS-UserPasswordExpiryTimeComputed attribute
-                    // which is stored as a long value representing ticks.
-
-                    if (!long.TryParse(dirObj[0].ToString(), out long ticks))
-                    {
-                        throw new ArgumentException("DA is not a long value - key [" + dirObj.Name + "] value: [" + dirObj[0] + "]");
-                    }
-
-                    // This is equivalent to Hex: 0x7fffffffffffffff which means it is set to never expire.  We have to set it to something
-                    // so we set to maximum date value...
-                    if (ticks == 9223372036854775807)
-                        PasswordExpiryDateTime = DateTimeOffset.MaxValue;
-                    else
-                        PasswordExpiryDateTime = ADFunctions.GetDateTime_FromLDAPPropertyLong(dirObj[0].ToString());
-
-                    // TODO Remove this line.  It is not needed anymore...???
-                    //PasswordExpiryDateTime = new DateTime(ticks);
-                    
-                    // TODO : Need to reimplement this.
-                    // (PasswordExpiryDateTime < DateTime.Now)
-                    //                        IsPasswordExpired = true;
+                    PasswordExpiryDateTime = ConvertADExpirationDates(dirObj);
+                    break;
+                case "accountExpires":
+                    AccountExpirey = ConvertADExpirationDates(dirObj);
                     break;
             }
         }
@@ -141,6 +124,19 @@ public class ADpUser : ADpBaseObject
     }
 
 
+    private ADpExpirationValue ConvertADExpirationDates(DirectoryAttribute adValue)
+    {
+        // This is a special case for several AD attributes (like msDS-UserPasswordExpiryTimeComputed and accountExpires)
+        // which are stored as a long value representing ticks.
+        DateTimeOffset calculatedDate;
+        
+        if (!long.TryParse(adValue[0].ToString(), out long ticks))
+        {
+            throw new ArgumentException("AD Attribute is not a long value - key [" + adValue.Name + "] value: [" + adValue[0] + "]");
+        }
+
+        return new ADpExpirationValue(ticks);
+    }
 
     /// <summary>
     /// Constructor that starts the process of creating a new user.
@@ -206,50 +202,60 @@ public class ADpUser : ADpBaseObject
 
     /// <summary>
     /// All the groups a user is a member of.
+    /// <para> Will be null if this attribute was not read form AD</para>
     /// </summary>
-    public HashSet<string> MemberOf { get; protected set; } = [];
+    public HashSet<string>? MemberOf { get; protected set; } = null;
 
 
     /// <summary>
     /// Number of bad passwords entered by the user.  This is reset when a valid password is entered.
+    /// <para>Will be null if this attribute was not read form AD</para>
     /// </summary>
-    public int BadPasswordCount { get; protected set; }
+    public int? BadPasswordCount { get; protected set; }
 
     /// <summary>
     ///    Date and Time of the last bad password attempt by the user.
+    /// <para> Will be null if this attribute was not read form AD</para>
     /// </summary>
-    public DateTimeOffset BadPasswordDateTime { get; protected set; }
+    public DateTimeOffset? BadPasswordDateTime { get; protected set; }
 
     
     /// <summary>
     ///   Date and Time of the last logon by the user.
+    /// <para> Will be null if this attribute was not read form AD</para>
     /// </summary>
-    public DateTimeOffset LastLogon { get; protected set; }
+    public DateTimeOffset? LastLogon { get; protected set; }
 
 
     /// <summary>
     ///   Date and Time the user account was locked out in Active Directory.
+    /// <para> Will be null if this attribute was not read form AD</para>
     /// </summary>
-    public DateTimeOffset LockOutDateTime { get; protected set; }
+    public DateTimeOffset? LockOutDateTime { get; protected set; }
 
     /// <summary>
     ///     Amount of time Account has been locked out in nano seconds.
     /// </summary>
-    public long LockOutDurationNS { get; protected set; }
+    public long? LockOutDurationNS { get; protected set; }
 
 
 
     /// <summary>
-    /// Date and Time the password will expire.  This is computed based on the password policy in Active Directory.  
+    /// Date and Time the password will expire.  This is computed based on the password policy in Active Directory.
+    /// <para>Will be null if this attribute was not read form AD</para>
     /// </summary>
-    public DateTimeOffset PasswordExpiryDateTime { get; protected set; }
+    public ADpExpirationValue? PasswordExpiryDateTime { get; internal set; }
 
+    /// <summary>
+    /// Date and time the account expires.
+    /// </summary>
+    public ADpExpirationValue? AccountExpirey { get; internal set; }
 
-
+    
     /// <summary>
     /// The date the user's password will expire.  This is not an updatable field.  It is calculated based on the password policy that applies for the user.
     /// </summary>
-    public DateTimeOffset PasswordExpiration { get; private set; }
+    public DateTimeOffset? PasswordExpiration { get; private set; }
 
 
     #endregion

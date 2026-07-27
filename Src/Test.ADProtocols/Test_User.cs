@@ -2,6 +2,7 @@
 using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
 using System.DirectoryServices.Protocols;
+using Bogus;
 using UT;
 using UT.CustomSupportObjects;
 using UT.SupportObjects;
@@ -128,7 +129,7 @@ public class Test_User
     public void Rename_Success()
     {
         // A --> Setup
-        // Create 2 random OU;s
+        // Create random OU;s
         ADpOrgUnit newOu = asi.CreateRandomOuNew();
 
         ADpUserProcessor userProcessor = asi.ADConnector.UserProcessor();
@@ -153,5 +154,41 @@ public class Test_User
         Assert.That(y.IsSuccess, Is.True, "[V_100] Failed to rename user.");
         Assert.That(userA.CommonName, Is.EqualTo(newName), "[V_110] User was not renamed correctly.");
     }
+
+
+    [Test]
+    public void BadPassword()
+    {
+        List<Person> persons = asi.GenerateRandomPeople(1);
+
+        // A --> Setup
+        // Create random OU;s
+        ADpOrgUnit newOu = asi.CreateRandomOuNew();
+
+        ADpUserProcessor userProcessor = asi.ADConnector.UserProcessor();
+        ADpUser          userA         = new ADpUser(persons[0].FullName, newOu.Path);
+        userA.SAMAccount = persons[0].UserName;
+        userA.UPN = persons[0].UserName + "@slugent.com";
+
+        
+        // Save User
+        Result x = userProcessor.AddNew(userA);
+        Assert.That(x.IsSuccess, Is.True, "[A_110] Failed to add user.");
+
+
+        // C  --> Action
+        // Attempt to login as User, but with bad password.
+        Result<LdapConnection> loginResult = asi.ADConnector.ConnectAsUser(userA.SAMAccount, "badpassword").Value;
+        Assert.That(loginResult.IsSuccess,Is.False,"[C_100] Login should have failed with bad password.");
+        loginResult = asi.ADConnector.ConnectAsUser(userA.SAMAccount, "badpassword").Value;
+        loginResult = asi.ADConnector.ConnectAsUser(userA.SAMAccount, "badpassword").Value;
+
+        // Should be 3 bad login attempts now.  Re-read User from AD and check BadPasswordCount
+        
+        // V  -- Verify
+        //Assert.That();
+    }
+
+
 }
 

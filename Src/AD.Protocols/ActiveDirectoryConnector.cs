@@ -72,7 +72,6 @@ public class ActiveDirectoryConnector : EngineBase
             NetworkCredential credential = new(_activeDirConfig.AdUser, _activeDirConfig.AdPassword);
             LdapConnection.Credential = credential;
             
-
             DomainRoot = ADSPath.FromDomainName(_activeDirConfig.Domain);
             if (rootOU != "")
             {
@@ -112,6 +111,57 @@ public class ActiveDirectoryConnector : EngineBase
         }
     }
 
+
+    // TODO:  Confirm this is what we want to do...
+    // Uses the current config to generate an AD connection with the given user and PAssword and
+    // returns the LDAPConnection object.  Mostly for testing user logins for now....
+    public Result<LdapConnection> ConnectAsUser(string user,
+                                                string password)
+    {
+        try
+        {
+            LdapDirectoryIdentifier directory = new(_activeDirConfig.Server1Name + "." + _activeDirConfig.Domain + $":{_activeDirConfig.Port}");
+
+            LdapConnection ldapCX = new LdapConnection(directory);
+            
+
+            // Set Credential
+            NetworkCredential credential = new(user, password);
+            ldapCX.Credential = credential;
+
+            DomainRoot = ADSPath.FromDomainName(_activeDirConfig.Domain);
+
+            // Use AuthType.Negotiate for Windows domain networks, or AuthType.Basic for standard user/pass over secure lines.
+            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+            {
+                ldapCX.AuthType = AuthType.Basic;
+                ldapCX.SessionOptions.ProtocolVersion = 3;
+                ldapCX.SessionOptions.ReferralChasing = ReferralChasingOptions.None;
+                ldapCX.SessionOptions.SecureSocketLayer = true;
+            }
+            else
+            {
+                ldapCX.AuthType = AuthType.Negotiate;
+                ldapCX.SessionOptions.SecureSocketLayer = true;
+            }
+
+            ldapCX.Bind();
+            
+
+            return Result.Ok(ldapCX);
+        }
+        catch (LdapException ex)
+        {
+            // Handle LDAP-specific exceptions
+            // Log the exception or perform any necessary error handling
+            return Result.Fail(new ExceptionalError($"LDAP exception occurred.  Server Connecting to: {_activeDirConfig.Server1Name}.{_activeDirConfig.Domain}:{_activeDirConfig.Port} | {ex.Message}", ex));
+        }
+        catch (Exception ex)
+        {
+            return Result.Fail(new ExceptionalError("Unexpected exception occurred", ex));
+        }
+
+    }
 
     /// <summary>
     /// Returns True if the AD Connector is connected to the AD Server.

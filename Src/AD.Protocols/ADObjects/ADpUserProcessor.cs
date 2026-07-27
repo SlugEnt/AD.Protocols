@@ -1,7 +1,8 @@
 ﻿
+using SlugEnt.AD.Protocols;
+using SlugEnt.AD.Protocols.Attributes;
 using SlugEnt.FluentResults;
 using System.DirectoryServices.Protocols;
-using SlugEnt.AD.Protocols;
 
 namespace AD.Protocols.ADObjects;
 
@@ -44,6 +45,27 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
         AttributeRetrieverMgr.AddAttribute("telephoneNumber");
         AttributeRetrieverMgr.AddAttribute("manager");
     }
+
+
+    /// <summary>
+    /// Set of attributes to retrieve for password and logon information.  This includes:
+    /// badPwdCount, badPasswordTime, lockoutTime, lockoutDuration, pwdLastSet, lastLogon, lastLogoff, lastLogonTimestamp, accountExpires, msDS-UserPasswordExpiryTimeComputed
+    /// </summary>
+    public void AttrRetrieval_PasswordLogonInfo()
+    {
+        AttributeRetrieverMgr.AddAttribute("badPwdCount");
+        AttributeRetrieverMgr.AddAttribute("badPasswordTime");
+        AttributeRetrieverMgr.AddAttribute("lockoutTime");
+        AttributeRetrieverMgr.AddAttribute("lockoutDuration");
+        AttributeRetrieverMgr.AddAttribute("pwdLastSet");
+        AttributeRetrieverMgr.AddAttribute("lastLogon");
+        AttributeRetrieverMgr.AddAttribute("lastLogoff");
+        AttributeRetrieverMgr.AddAttribute("lastLogonTimestamp");
+        // TODO need to add this to the ADpUser object as a DateTime property.  It is currently a long.
+//        AttributeRetrieverMgr.AddAttribute("accountExpires");
+        AttributeRetrieverMgr.AddAttribute("msDS-UserPasswordExpiryTimeComputed");
+    }
+
 
     public void AttrRetrieval_AddUserStd()
     {

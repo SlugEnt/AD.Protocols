@@ -232,4 +232,23 @@ public class Ad_SupportInitializer
         ADpUser user = new ADpUser(name, parentPath);
         return user;
     }
+
+    /// <summary>
+    /// A Person Faker creator
+    /// </summary>
+    public static Faker<Person> PersonFaker = new Faker<Person>()
+        .RuleFor(p => p.FirstName, f=> f.Name.FirstName())
+        .RuleFor(p=>p.LastName, f=> f.Name.LastName())
+        .RuleFor(p => p.Email, (f, p) => f.Internet.Email(p.FirstName, p.LastName))
+        .RuleFor(p => p.Phone, f => f.Phone.PhoneNumber());
+    
+    /// <summary>
+    /// Generates a list of random person objects
+    /// </summary>
+    /// <param name="numberOfPeople"></param>
+    /// <returns></returns>
+    public List<Person> GenerateRandomPeople(int numberOfPeople)
+    {
+        return PersonFaker.Generate(numberOfPeople);    
+    }
 }
