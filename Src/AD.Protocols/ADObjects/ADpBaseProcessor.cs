@@ -422,6 +422,35 @@ public abstract class ADpBaseProcessor
 
 
     /// <summary>
+    /// Renames the object and returns the full new DN.
+    /// </summary>
+    /// <param name="currentDistinguishedName"></param>
+    /// <param name="newCommonName"></param>
+    /// <param name="parentPath"></param>
+    /// <returns></returns>
+    protected Result<string> Rename(string currentDistinguishedName, string newCommonName, ADSPath parentPath)
+    {
+        try
+        {
+            string           fullNewCN        = $"{NameAttributeName}={newCommonName}";
+            ModifyDNRequest  modifyDNRequest  = new(currentDistinguishedName, parentPath.Path, fullNewCN);
+            ModifyDNResponse modifyDNResponse = (ModifyDNResponse)_ldapConnection.SendRequest(modifyDNRequest);
+            if (modifyDNResponse.ResultCode == ResultCode.Success)
+            {
+                ADSPath child = new(parentPath.Path, fullNewCN);
+                return Result.Ok(child.Path);
+            }
+
+            return Result.Fail("Failed to move User: " + modifyDNResponse.ErrorMessage + " [ " + modifyDNResponse.ResultCode + " ]");
+        }
+        catch (Exception e)
+        {
+            return Result.Fail(new ExceptionalError("Failed to move User: " + currentDistinguishedName + " Error: " + e.Message, e));
+        }
+
+    }
+
+    /// <summary>
     /// Provides access to the AttributeRetrieverMgr which is used to set the attributes that
     /// should be returned from Active Directory when retrieving objects.  This allows for customization of the attributes that are returned for different object types.
     /// </summary>

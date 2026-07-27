@@ -1922,4 +1922,24 @@ public class ActiveDirectoryConnector : EngineBase
         ADSPath ouPath = DomainRoot.NewChildADSPath(ADpReadOnlyPasswordPolicy.ROOT_OU_PATH,false);
         return ouPath;
     }
+
+
+    /// <summary>
+    /// Returns a new OrgUnitProcessor to manage Organization Units in Active Directory.  This is the preferred way to manage OUs.
+    /// </summary>
+    /// <returns></returns>
+    public ADpOrgUnitProcessor OrgUnitProcessor()
+    {
+        return new ADpOrgUnitProcessor(LdapConnection);
+    }
+
+
+    /// <summary>
+    /// Returns a new User Processor to manage Users in Active Directory.  This is the preferred way to manage Users.
+    /// </summary>
+    /// <returns></returns>
+    public ADpUserProcessor UserProcessor()
+    {
+        return new ADpUserProcessor(LdapConnection);
+    }
 }

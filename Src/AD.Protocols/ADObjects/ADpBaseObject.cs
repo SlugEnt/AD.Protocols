@@ -110,6 +110,23 @@ public abstract class ADpBaseObject
         _distinguishedName = newDistinguishedName;
     }
 
+    /// <summary>
+    /// Used during an object Rename to replace Distinguished Name and Common Name.
+    /// Bypasses some normal Field Setters.
+    /// </summary>
+    /// <param name="newDistinguishedName"></param>
+    /// <param name="newCommonName"></param>
+    internal void RenameObject(string newDistinguishedName,
+                               string newCommonName)
+    {
+        ReplaceDistinguishedName(newDistinguishedName);
+        
+        // Temporary bypass the normal Setter.
+        InCreationMode = true;
+        CommonName     = newCommonName;
+        InCreationMode = false;
+    }
+
     
     /// <summary>
     /// Some objects have complicated values (for instance - user with UserAccountControl) that need to be synchronized

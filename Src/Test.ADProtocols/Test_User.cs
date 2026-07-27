@@ -100,15 +100,13 @@ public class Test_User
 
 
     [Test]
-    public void Exists()
+    public void Exists_Success()
     {
         // A --> Setup
         // Create 2 random OU;s
         ADpOrgUnit newOu    = asi.CreateRandomOuNew();
 
-//        ADpOrgUnitProcessor ouProcessor   = new ADpOrgUnitProcessor(asi.ADConnector.LdapConnection);
-        
-        ADpUserProcessor userProcessor = new ADpUserProcessor(asi.ADConnector.LdapConnection);
+        ADpUserProcessor userProcessor = asi.ADConnector.UserProcessor();
         ADpUser          userA         = new ADpUser(asi.Faker.Person.FullName, newOu.Path);
 
         // See if user exists.
@@ -123,8 +121,37 @@ public class Test_User
         Result<bool> existsResultAfterAdd = userProcessor.Exists(userA);
         Assert.That(existsResultAfterAdd.IsSuccess, Is.True, "[V_200] Failed to check if user exists after add.");
         Assert.That(existsResultAfterAdd.Value, Is.True, "[V_210] User was not found after add.");
+    }
 
 
+    [Test]
+    public void Rename_Success()
+    {
+        // A --> Setup
+        // Create 2 random OU;s
+        ADpOrgUnit newOu = asi.CreateRandomOuNew();
+
+        ADpUserProcessor userProcessor = asi.ADConnector.UserProcessor();
+        ADpUser          userA         = new ADpUser(asi.Faker.Person.FullName, newOu.Path);
+
+        // Save User
+        Result x = userProcessor.AddNew(userA);
+        Assert.That(x.IsSuccess, Is.True, "[A_110] Failed to add user.");
+
+        
+        // Confirm user exists.
+        Result<bool> existsResultAfterAdd = userProcessor.Exists(userA);
+        Assert.That(existsResultAfterAdd.IsSuccess, Is.True, "[A_200] Failed to check if user exists after add.");
+        Assert.That(existsResultAfterAdd.Value, Is.True, "[A_210] User was not found after add.");
+
+        
+        // C --> Act
+        string newName = "john hamilton smith";
+
+        // V --> Verify
+        Result<string> y = userProcessor.Rename(userA,newName);
+        Assert.That(y.IsSuccess, Is.True, "[V_100] Failed to rename user.");
+        Assert.That(userA.CommonName, Is.EqualTo(newName), "[V_110] User was not renamed correctly.");
     }
 }
 
