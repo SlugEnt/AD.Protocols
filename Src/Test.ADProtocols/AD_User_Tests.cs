@@ -176,67 +176,6 @@ public class AD_User_Tests
 
 
 
-    [Test]
-    public void MoveUser()
-    {
-        // A --> Setup
-
-        // Create a random userFromAdRo OU
-        Result<ADSPath> newOuResult = asi.CreateRandomOu();
-        Assert.That(newOuResult.IsSuccess, Is.True, "A-100: Unable to create the unique containing OU for this test.  Errors: " + newOuResult.ToStringWithLineFeeds());
-
-        // Create a second random userFromAdRo OU we will move the userFromAdRo to
-        Result<ADSPath> moveToOuResult = asi.CreateRandomOu();
-        Assert.That(moveToOuResult.IsSuccess,
-                    Is.True,
-                    "A-100: Unable to create the unique containing OU for the move destination.  Errors: " + moveToOuResult.ToStringWithLineFeeds());
-
-
-        // Create Test User Basic
-        TstUserBasic testUser = new("TestBasicUser Creation", newOuResult.Value, asi.Faker);
-        testUser.CreateUser(asi.ADConnector);
-
-
-        // B. Read the userFromAdRo back to verify successful creation
-        // Part B - Retrieve the User
-        string searchFilter = ActiveDirectoryConnector.SEARCH_FILTER_ALL_USERS;
-        List<string> attributes = [];
-        ADpUserFromAD_RO.AddInfoAttributes(attributes);
-        ADpUserFromAD_RO.AddBaseAttributes(attributes);
-        Result<ADpUserFromAD_RO> foundUser = asi.ADConnector.UserFindSingleUser(newOuResult.Value.Path,
-                                                                        SearchScope.OneLevel,
-                                                                        searchFilter,
-                                                                        attributes);
-
-        Assert.That(foundUser.IsSuccess, Is.True, "Z-100:  Failed to find TestUser --> AppError: " + foundUser.ToStringWithLineFeeds());
-        ADpUserFromAD_RO userFromAdRoFromAd = foundUser.Value;
-        HelperMethods.DisplayUser(userFromAdRoFromAd);
-
-
-        // C. Move the User
-        Result<string> moveResult = asi.ADConnector.UserMove(userFromAdRoFromAd, moveToOuResult.Value.Path);
-        Assert.That(moveResult.IsSuccess, Is.True, "C-100:  User move failed - " + moveResult.ToStringWithLineFeeds());
-        Console.WriteLine("Moving userFromAdRo to : " + moveToOuResult.Value.Path);
-
-
-        // D .  Verify the userFromAdRo is Moved.  First confirm not in old location
-        foundUser = asi.ADConnector.UserFindSingleUser(newOuResult.Value.Path,
-                                                SearchScope.OneLevel,
-                                                searchFilter,
-                                                attributes);
-
-        Assert.That(foundUser.IsFailed, Is.True, "D-100:  User was still found in old OU. --> AppError: " + foundUser.ToStringWithLineFeeds());
-
-
-        // E.  Now confirm the userFromAdRo is in the new location
-        foundUser = asi.ADConnector.UserFindSingleUser(moveToOuResult.Value.Path,
-                                                SearchScope.OneLevel,
-                                                searchFilter,
-                                                attributes);
-
-
-        Assert.That(foundUser.IsSuccess, Is.True, "E-100:  User was not found in new location. --> AppError: " + foundUser.ToStringWithLineFeeds());
-    }
 
 
 

@@ -128,7 +128,7 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
     /// </summary>
     /// <param name="obj"></param>
     /// <returns></returns>
-    public Result<DeleteResponse> Delete(T obj) { return Delete(obj.DistinguishedName); }
+    public Result Delete(T obj) { return Delete(obj.DistinguishedName); }
 
     
     
@@ -345,5 +345,31 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
 
     }
 
+    
+    /// <summary>
+    /// Returns True if the specified object exists in Active Directory, otherwise returns False.
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <returns></returns>
+    public Result<bool> Exists (T obj)
+    {
+        if (obj.DistinguishedName == null)
+            return Result.Fail("Distinguished Name field does not exist - cannot check this object yet.");
+        
+        return Exists(obj.DistinguishedName);
+    }
+
+    
+    
+    public Result Move(T obj,
+                       ADSPath destinationPath)
+    {
+        Result<string> result = Move(obj.DistinguishedName, destinationPath, obj.Name);
+        if (result.IsFailed)
+            return Result.Fail(result.Errors);
+        
+        obj.ReplaceDistinguishedName(result.Value);
+        return Result.Ok();
+    }
 }
 

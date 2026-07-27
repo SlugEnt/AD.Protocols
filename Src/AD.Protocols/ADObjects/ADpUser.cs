@@ -1,8 +1,5 @@
-﻿
-using SlugEnt.AD.Protocols;
+﻿using SlugEnt.AD.Protocols;
 using SlugEnt.AD.Protocols.Attributes;
-using SlugEnt.FluentResults;
-using AD.Protocols.ADObjects;
 using System.DirectoryServices.Protocols;
 using System.Text;
 
@@ -37,8 +34,9 @@ public class ADpUser : ADpBaseObject
     /// <param name="attributes"></param>
     public ADpUser(SearchResultAttributeCollection attributes)
     {
-        InCreationMode = true;
-
+        InCreationMode        = true;
+        IsFromActiveDirectory = true;
+        
         bool samAccountFound = false;
         bool upnFound = false;
 
@@ -123,19 +121,22 @@ public class ADpUser : ADpBaseObject
 
                     // TODO Remove this line.  It is not needed anymore...???
                     //PasswordExpiryDateTime = new DateTime(ticks);
-                    //if (PasswordExpiryDateTime < DateTime.Now)
+                    
+                    // TODO : Need to reimplement this.
+                    // (PasswordExpiryDateTime < DateTime.Now)
                     //                        IsPasswordExpired = true;
                     break;
-
-
             }
         }
-    
+        
         
         if (DistinguishedName == null | DistinguishedName == string.Empty)
             throw new
                 ArgumentException("No Distinguished Name found in the orgUnit object.  Anytime you retrieve an object from Active Directory you must retrieve this attribute.");
-
+        
+        // Calculate ParentPath
+        ParentPath = new ADSPath(DistinguishedName).GetParent();
+        
         InCreationMode = false;
     }
 
@@ -152,13 +153,6 @@ public class ADpUser : ADpBaseObject
     }
 
 
-    /// <summary>
-    /// Constructor for creating an ADpUser object from an existing AD object.  This
-    /// will set the InCreationMode to true so that the attributes are not added to the
-    /// modified list during initial setting.
-    /// </summary>
-    internal ADpUser() : base()
-    { }
 
     
     /// <summary>
@@ -200,6 +194,12 @@ public class ADpUser : ADpBaseObject
         base.SyncPreSave();     
     }
 
+
+    /// <summary>
+    /// Is true, when this object was created from an existing Active Directory object. 
+    /// </summary>
+    public bool IsFromActiveDirectory { get; protected set; } = false;
+    
 
     #region Info Attributes
 
@@ -550,11 +550,11 @@ public class ADpUser : ADpBaseObject
         }
     }
 
-    
+
     /// <summary>
     ///  User Account Control value.  Which is actually a bunch of flags that create the value.
     /// </summary>
-    public int UserAccountControl
+    /*public int UserAccountControl
     {
         get;
         set
@@ -573,14 +573,28 @@ public class ADpUser : ADpBaseObject
             }
         }
     }
+    */
 
     #endregion
 
 
-        /// <summary>
-        /// Provides access to the UserAccountControl object which allows user to manipulate / view all the components
-        /// that make up this value.
-        /// </summary>
+    /// <summary>
+    /// Provides access to the UserAccountControl object which allows user to manipulate / view all the components
+    /// Note:  This will be null IF the object was read from Active Directory, but the UserAccountControl attribute was not retrieved.
+    /// You CANNOT set UserAccoutnControl properties on an AD object that did not retrieve it first.
+    /// that make up this value.
+    /// </summary>
     public UserAccountControl UserAccountControlSetter { get; }
+
+
+    /// <summary>
+    /// Returns True if the 2 user objects Distinguished Names are the same.  It checks NO other fields.
+    /// </summary>
+    /// <param name="other"></param>
+    /// <returns></returns>
+    public bool EqualSameUser(ADpUser other)
+    {
+        return string.Equals(DistinguishedName, other.DistinguishedName, StringComparison.CurrentCultureIgnoreCase);
+    }
 }
 

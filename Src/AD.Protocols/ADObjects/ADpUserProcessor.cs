@@ -50,5 +50,17 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
 
     }
 
+    /*
+    public Result Move (ADpUser user, ADSPath newParentPath)
+    {
+        Result<string> result = base.Move(user.DistinguishedName, newParentPath, user.CommonName);
+        if (result.IsSuccess)
+        {
+            user.DistinguishedName = result.Value;
+        }
+
+        return Result.Ok();
+    }
+    */
 }
 

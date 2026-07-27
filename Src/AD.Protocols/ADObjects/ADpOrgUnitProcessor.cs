@@ -51,7 +51,20 @@ public class ADpOrgUnitProcessor : ADpGenericProcessor<ADpOrgUnit>
         AttributeRetrieverMgr.AddAttribute("ou");
     }
 
-
-
+    
+    /// <summary>
+    /// Provides a simple way to add a new OU to the directory.
+    /// </summary>
+    /// <param name="ouName">Name to be given to the OU</param>
+    /// <param name="parentPath">Parent path under which the OU will be created</param>
+    /// <returns>Result containing the newly created OU or errors if creation failed</returns>
+    public Result<ADpOrgUnit> AddNew (string ouName, ADSPath parentPath)
+    {
+        ADpOrgUnit newOu = new ADpOrgUnit(ouName, parentPath);
+        Result result = AddNew(newOu);
+        if (result.IsFailed)
+            return Result.Fail<ADpOrgUnit>(result.Errors);
+        return Result.Ok(newOu);
+    }
 }
 

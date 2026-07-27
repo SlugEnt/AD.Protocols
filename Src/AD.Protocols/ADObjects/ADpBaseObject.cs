@@ -12,6 +12,10 @@ namespace AD.Protocols.ADObjects;
 /// </summary>
 public abstract class ADpBaseObject
 {
+    
+    // This must be defined this way to allow special overridding of the property in some cases.
+    private string _distinguishedName = "";
+    
     /// <summary>
     /// Internal Constructor used by the ADpOrgUnitProcessor to create an ADpOrgUnit object from an existing AD object.  This
     /// constructor sets the object in creation mode to prevent adding attributes to the AttributesToUpdate dictionary during initial creation.
@@ -96,6 +100,18 @@ public abstract class ADpBaseObject
 
 
     /// <summary>
+    /// Replaces the Distinguished Name of the object.  This should be used in very specific use cases only and not for general purpose
+    /// use as it makes assumptions about the state of the object that may not apply in other scenarios.
+    /// </summary>
+    /// <param name="newDistinguishedName"></param>
+    internal void ReplaceDistinguishedName (string newDistinguishedName)
+    {
+        // We bypass the property setter here because we are replacing the distinguished name typically after an AD move operation or similar.
+        _distinguishedName = newDistinguishedName;
+    }
+
+    
+    /// <summary>
     /// Some objects have complicated values (for instance - user with UserAccountControl) that need to be synchronized
     /// or have other changes made to the core object before saving.  This method is called before saving the object to Active Directory
     /// to allow the derived object to perform any necessary pre-save operations.
@@ -148,13 +164,14 @@ public abstract class ADpBaseObject
     /// </summary>
     public string DistinguishedName
     {
-        get;
+        get { return _distinguishedName;}
         internal set
         {
             if (field != null)
                 throw new InvalidOperationException("Distinguished Name cannot be changed once it has been set.");
 
-            field = value;
+            _distinguishedName = value;
+            
 
             // Do not add attribute to modification list if in initial creation mode ie from Active Directory.
             if (InCreationMode)

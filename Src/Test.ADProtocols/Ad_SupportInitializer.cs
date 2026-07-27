@@ -95,13 +95,14 @@ public class Ad_SupportInitializer
         if (parentOrgUnit == null)
     }  
     */
-    
+
     /// <summary>
     ///     Helper Function to create a random OU from the parent path
     /// </summary>
     /// <param name="parentPath">If Null it will use the UnitTestParent property for its value.</param>
     /// <param name="sm"></param>
     /// <returns></returns>
+    [Obsolete]
     public Result<ADSPath> CreateRandomOu(ADSPath parentPath = null)
     {
         Result addResult;
@@ -118,28 +119,74 @@ public class Ad_SupportInitializer
                 newOuName = newOuName.Replace("&", string.Empty);
 
                 // Now  add OU to LDAP
-                  
-                addResult =  ADConnector.OuCreate(newOuName, parentPath);
-                if (addResult.IsSuccess)
+                ADpOrgUnitProcessor ouProcessor = new ADpOrgUnitProcessor(ADConnector.LdapConnection);
+                Result<ADpOrgUnit> result = ouProcessor.AddNew(newOuName, parentPath);
+                if (result.IsSuccess)
                 {
                     return Result.Ok(parentPath.NewChildADSPath("ou=" + newOuName));
                 }
 
-                if (addResult.IsFailed)
+                if (result.IsFailed)
                 {
-                    if (addResult.Errors[0].Message == ActiveDirectoryConnector.EXISTS)
+                    if (result.Errors[0].Message == ActiveDirectoryConnector.EXISTS)
                     {
                         // Try again...
                         continue;
                     }
                     else
-                        return Result.Fail(new Error("Failed to create the random OU at path: " + parentPath.Path + " for reason " + addResult.ToStringWithLineFeeds()));
+                        return Result.Fail(new Error("Failed to create the random OU at path: " + parentPath.Path + " for reason " + result.ToStringWithLineFeeds()));
                 }
             }
         }
         catch (Exception e)
         {
             return Result.Fail(new ExceptionalError(e));
+        }
+    }
+
+
+    /// <summary>
+    ///     Helper Function to create a random OU from the parent path.
+    /// </summary>
+    /// <param name="parentPath">It throws if it errors
+    /// <param name="sm"></param>
+    /// <returns></returns>
+    public ADpOrgUnit CreateRandomOuNew(ADSPath parentPath = null)
+    {
+        Result addResult;
+        if (parentPath == null)
+            parentPath = UnitTestParent;
+
+        try
+        {
+            while (true)
+            {
+                string newOuName = Faker.Random.Word();
+
+                // Since word is really words, we need to remove bogus characters
+                newOuName = newOuName.Replace("&", string.Empty);
+
+                // Now  add OU to LDAP
+                ADpOrgUnitProcessor ouProcessor = new ADpOrgUnitProcessor(ADConnector.LdapConnection);
+                Result<ADpOrgUnit>  result      = ouProcessor.AddNew(newOuName, parentPath);
+                if (result.IsSuccess)
+                    return result.Value;
+                
+                if (result.IsFailed)
+                {
+                    if (result.Errors[0].Message == ActiveDirectoryConnector.EXISTS)
+                    {
+                        // Try again...
+                        continue;
+                    }
+                    else
+                        throw new Exception("[CreateRandomOuNew_100]  Failed to create the random OU at path: " + parentPath.Path + " for reason " + result.ToStringWithLineFeeds());
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            throw new Exception("[CreateRandomOuNew_200]  Failed to create the random OU at path: " + parentPath.Path + " for reason " + e.Message, e);
         }
     }
 
@@ -170,4 +217,19 @@ public class Ad_SupportInitializer
 
     
     public void Cleanup (){}
+
+    
+    /// <summary>
+    /// Creates a new random user under the parent path.  If the parent path is null, it will use the UnitTestParent property.
+    /// </summary>
+    /// <param name="parentPath">The parent path under which to create the user. If null, the UnitTestParent is used.</param>
+    /// <returns>A new ADpUser object.</returns>
+    public ADpUser CreateRandomUserNew(ADSPath parentPath = null)
+    {
+        if (parentPath == null)
+            parentPath = UnitTestParent;
+        string name = Faker.Person.FullName;
+        ADpUser user = new ADpUser(name, parentPath);
+        return user;
+    }
 }

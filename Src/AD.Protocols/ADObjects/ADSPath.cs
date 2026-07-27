@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Numerics;
+using System.Text;
 
 
 namespace AD.Protocols.ADObjects;
@@ -27,6 +28,24 @@ public class ADSPath
         GetDistinguishedName(adsPathLower);
     }
 
+    /// <summary>
+    /// Constructs an ADSPath object from a parent path and a child path.  The child path must start with cn= or CN=.
+    /// </summary>
+    /// <param name="parentPath"></param>
+    /// <param name="childPath"></param>
+    public ADSPath(string parentPath,
+                   string childPath) : this(parentPath)
+    {
+        
+        //Path = parentPath;
+        
+        if (childPath.StartsWith("cn=") || childPath.StartsWith("CN="))
+            Path = NewChildADSPathCN(childPath).Path;
+        else
+        {
+            Path = NewChildADSPath(childPath, true).Path;
+        }
+    }
 
     /// <summary>
     ///     The distinguished name part of this ADSPath
@@ -64,10 +83,10 @@ public class ADSPath
                                        string suffix)
     {
         bool suffixEmpty = suffix == string.Empty ? true : false;
-        bool dnEmpty = dn == string.Empty ? true : false;
+        bool dnEmpty     = dn == string.Empty ? true : false;
         bool prefixEmpty = prefix == string.Empty ? true : false;
 
-        StringBuilder sb = new(1024);
+        StringBuilder sb = new(200);
         if (!prefixEmpty)
         {
             sb.Append(prefix);
@@ -106,7 +125,7 @@ public class ADSPath
     public static string FindCN(string path)
     {
         string toLower = path.ToLower();
-        int start = 3;
+        int    start   = 3;
         if (!toLower.StartsWith("cn="))
         {
             start = toLower.IndexOf("/cn=");
@@ -132,7 +151,7 @@ public class ADSPath
     /// <returns></returns>
     public static ADSPath FromDomainName(string domainName)
     {
-        string dn = "dc=" + domainName.Replace(".", ",dc=");
+        string  dn  = "dc=" + domainName.Replace(".", ",dc=");
         ADSPath obj = new(dn);
         return obj;
     }
@@ -163,9 +182,9 @@ public class ADSPath
     public ADSPath GetParent()
     {
         // Build a new parent, using the same prefix and suffix as This object.  Just replace the parentDN
-        string parentDN = GetParentDN();
-        string fullPath = BuildFullPath(Prefix, parentDN, Suffix);
-        ADSPath obj = new(fullPath);
+        string  parentDN = GetParentDN();
+        string  fullPath = BuildFullPath(Prefix, parentDN, Suffix);
+        ADSPath obj      = new(fullPath);
         return obj;
     }
 
@@ -234,12 +253,12 @@ public class ADSPath
 
             if (start == -1)
             {
-                Prefix = Path;
+                Prefix  = Path;
                 dnStart = Path.Length;
                 return;
             }
 
-            Prefix = "";
+            Prefix  = "";
             dnStart = start;
             return;
         }
@@ -266,7 +285,7 @@ public class ADSPath
         if (adsPathLower.StartsWith("dc="))
         {
             Suffix = Path;
-            dnEnd = 0;
+            dnEnd  = 0;
             return;
         }
 
@@ -277,13 +296,13 @@ public class ADSPath
         if (start == -1)
         {
             Suffix = "";
-            dnEnd = Path.Length;
+            dnEnd  = Path.Length;
             return;
         }
 
         // Skip first comma
         Suffix = Path.Substring(start + 1);
-        dnEnd = start;
+        dnEnd  = start;
     }
 
 
@@ -322,7 +341,8 @@ public class ADSPath
     /// </summary>
     /// <param name="childPart">The child container of the current object.  In format:  OU=child or OU=grandchild,OU=child</param>
     /// <returns></returns>
-    public ADSPath NewChildADSPath(string childPart, bool isOuPath = true)
+    public ADSPath NewChildADSPath(string childPart,
+                                   bool isOuPath = true)
     {
         // If the Path is not an OU path, then we need to use the CN= part of the path.
         if (!isOuPath)
@@ -340,8 +360,8 @@ public class ADSPath
 
         // Need to strip leading CN= off.
         string childDN = "";
-        string dnLC = DN.ToLower();
-        int start = -1;
+        string dnLC    = DN.ToLower();
+        int    start   = -1;
         if (dnLC.StartsWith("cn="))
         {
             // TODO - Should also check for O=
@@ -368,7 +388,7 @@ public class ADSPath
 
         //			string childDN = childPart + "," + DN;
 
-        string childPath = BuildFullPath(Prefix, childDN, Suffix);
+        string  childPath    = BuildFullPath(Prefix, childDN, Suffix);
         ADSPath childADSPath = new(childPath);
         return childADSPath;
     }
@@ -387,8 +407,8 @@ public class ADSPath
 
         // Need to strip leading CN= off.
         string childDN = "";
-        string dnLC = DN.ToLower();
-        int start = -1;
+        string dnLC    = DN.ToLower();
+        int    start   = -1;
         childDN = DN;
 
         if (childDN.Length == 0)
@@ -401,10 +421,11 @@ public class ADSPath
 
         //			string childDN = childPart + "," + DN;
 
-        string childPath = BuildFullPath(Prefix, childDN, Suffix);
+        string  childPath    = BuildFullPath(Prefix, childDN, Suffix);
         ADSPath childADSPath = new(childPath);
         return childADSPath;
     }
+
 
     /// <summary>
     ///     Returns the name portion only of the left most RDN. So in OU=Tampa,OU=Florida,dc=some,dc=local, it would return
@@ -438,14 +459,14 @@ public class ADSPath
             throw new ApplicationException("ShortName:  Error locating the start of the name.");
 
         // Find the next marker
-        int endingIndex = IndexOfNextMarker(subDN, nameStartIndex);
-        int start = nameStartIndex + 1;
-        int length = 0;
+        int    endingIndex = IndexOfNextMarker(subDN, nameStartIndex);
+        int    start       = nameStartIndex + 1;
+        int    length      = 0;
         string name;
         if (endingIndex != -1)
         {
             length = endingIndex - start;
-            name = DN.Substring(start, length);
+            name   = DN.Substring(start, length);
         }
         else
         {
@@ -461,4 +482,35 @@ public class ADSPath
     /// </summary>
     /// <returns></returns>
     public override string ToString() => Path;
+
+
+    public static bool operator ==(ADSPath left,
+                                   ADSPath right)
+    {
+        if (left is null && right is null)
+            return true;
+        if (left is null || right is null)
+            return false;
+
+        return left.Path.Equals(right.Path, StringComparison.OrdinalIgnoreCase);
+    }
+
+
+    public static bool operator !=(ADSPath left,
+                                   ADSPath right)
+    {
+        return !(left == right);
+    }
+
+
+    public override bool Equals(object obj)
+    {
+        if (obj is ADSPath other)
+            return string.Equals(Path, other.Path, StringComparison.OrdinalIgnoreCase);
+
+        return false;
+    }
+
+
+    public override int GetHashCode() { return Path != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Path) : 0; }
 }

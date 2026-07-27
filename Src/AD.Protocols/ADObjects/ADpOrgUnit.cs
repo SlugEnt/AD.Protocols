@@ -93,6 +93,11 @@ public class ADpOrgUnit : ADpBaseObject
 
 
     /// <summary>
+    /// Returns the ADSPath for this object.  This is a convenience property that allows you to get the ADSPath for this object without having to create a new ADSPath object.
+    /// </summary>
+    public ADSPath Path {get{return new ADSPath(DistinguishedName);}}
+    
+    /// <summary>
     /// Builds the prefix for the distinguished name of the object.  Some objects use a prefix other than cn.
     /// </summary>
     /// <returns></returns>

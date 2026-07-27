@@ -59,11 +59,10 @@ public abstract class ADpBaseProcessor
     /// </summary>
     /// <param name="distinguishedName"></param>
     /// <returns></returns>
-    public Result<DeleteResponse> Delete (string distinguishedName, bool recursiveDeleteChildren = false)
+    public Result Delete (string distinguishedName, bool recursiveDeleteChildren = false)
     {
         if (_ldapConnection == null)
-            return Result.Fail<DeleteResponse>("The LDAP Connection has not been set.  Cannot delete object.");
-
+            return Result.Fail("The LDAP Connection has not been set.  Cannot delete object.");
         try
         {
             DeleteRequest  deleteRequest  = new(distinguishedName);
@@ -83,7 +82,7 @@ public abstract class ADpBaseProcessor
             DeleteResponse deleteResponse = (DeleteResponse)_ldapConnection.SendRequest(deleteRequest);
             if (deleteResponse.ResultCode == ResultCode.Success)
             {
-                return Result.Ok(deleteResponse);
+                return Result.Ok();
             }
 
             return Result.Fail($"Failed to delete {ObjectEnglishName}: {deleteResponse.ErrorMessage} [ {deleteResponse.ResultCode} ]");
@@ -137,10 +136,9 @@ public abstract class ADpBaseProcessor
     /// Retrieves a single object based upon the provided distinguished name.
     /// </summary>
     /// <param name="dn">The distinguished name of the object to retrieve.</param>
-    /// <param name="searchScope">The scope of the search.</param>
-    /// <param name="attributesToReturn">The attributes to return for the object.</param>
+    /// <param name="overrideAttributes">Optional array of attributes to override the default attributes to return.  Only needed in rare cases</param>
     /// <returns>A Result containing the search result entry collection or an error.</returns>
-    protected Result<SearchResultEntryCollection> GetSingle (string dn)
+    protected Result<SearchResultEntryCollection> GetSingle (string dn, string[] overrideAttributes = null)
     {
         SearchScope searchScope = SearchScope.Base;
         string searchFilter = $"(objectClass=*)";
@@ -148,7 +146,9 @@ public abstract class ADpBaseProcessor
         
         //        Result<SearchResultEntryCollection> result = Find(dn, searchScope, $"(objectClass={_objectClass})", attributesToReturn);
         Result<List<SearchResponse>> result = 
-            SearchDirectoryRaw(dn,searchFilter, searchScope);
+            SearchForSingleEntryRaw(dn,searchFilter, searchScope,overrideAttributes);
+        if (result.ReasonCode == EnumReasonCode.NotFound)
+            return Result.Fail(NOT_FOUND,EnumReasonCode.NotFound);
         
         if (result.IsFailed)
             return Result.Fail(result.Errors);
@@ -162,6 +162,23 @@ public abstract class ADpBaseProcessor
         return Result.Ok(result.Value[0].Entries);
     }
 
+
+    /// <summary>
+    /// Returns whether an object with the specified distinguished name exists in Active Directory.
+    /// </summary>
+    /// <param name="dn">The distinguished name of the object to check.</param>
+    /// <returns>A Result indicating whether the object exists or an error occurred.  Value is True if it exists, False if not.</returns>
+    public Result<bool> Exists (string dn)
+    {
+        string[] overrideAttributes = new string[] { "cn" }; // Only need to retrieve the cn attribute to check existence
+        Result<SearchResultEntryCollection> result = GetSingle(dn, overrideAttributes);
+        
+        if (result.IsSuccess) return Result.Ok(true);
+        if(result.ReasonCode == EnumReasonCode.NotFound)
+            return Result.Ok(false);
+        return Result.Fail(result.Errors);
+    }
+    
     
     /// <summary>
     /// Finds all objects that match the search scope and filter.
@@ -214,11 +231,12 @@ public abstract class ADpBaseProcessor
     /// <param name="searchContainerDn">Distinguished name from which to start the search from</param>
     /// <param name="searchFilter">LDAP Syntax search filter</param>
     /// <param name="searchScope">LDAP Syntax search scope</param>
-    /// <param name="attributeList">List of attributes to bring back</param>
+    /// <param name="overrideAttributes">Only if you wish to bypass the current Attributes to Retrieve for this call only</param>    
     /// <returns>Result Success or Failure (along with error message)</returns>
     public Result<List<SearchResponse>> SearchDirectoryRaw(string searchContainerDn,
                                                         string searchFilter,
-                                                        SearchScope searchScope)
+                                                        SearchScope searchScope,
+                                                        string[] overrideAttributes = null)
     {
         List<SearchResponse> result = new();
         SearchResponse? response = null;
@@ -230,10 +248,15 @@ public abstract class ADpBaseProcessor
 
             // used to retrieve the cookie to send for the subsequent request
             PageResultResponseControl pageResponseControl;
+            if (overrideAttributes == null)
+            {
+                overrideAttributes = AttributeRetrieverMgr.Attributes;
+            }
+            
             SearchRequest searchRequest = new(searchContainerDn,
                                               searchFilter,
                                               searchScope,
-                                              AttributeRetrieverMgr.Attributes);
+                                              overrideAttributes);
             searchRequest.Controls.Add(pageRequestControl);
 
             while (true)
@@ -256,6 +279,69 @@ public abstract class ADpBaseProcessor
                 return Result.Fail(new ExceptionalError("The starting container does not exist - " + searchContainerDn, e));
             }
             return Result.Fail(new ExceptionalError($"SearchDirectory: [ {searchContainerDn} ]  Had Error. {e.Message}", e));
+        }
+
+        return Result.Ok(result);
+    }
+
+
+    /// <summary>
+    /// This method is an exact copy of SearchDirectoryRaw, but it is used when we have specified the searchContainerDn
+    /// to be a single item, such as CN= It responds with NotFound if AD returns object does not exist.
+    /// <remarks>In our case, because we are looking for a single specific item, the Object Does Not Exist  means the
+    /// object is not found and not also possibly the parent does not exist.</remarks>
+    /// </summary>
+    /// <param name="searchContainerDn"></param>
+    /// <param name="searchFilter"></param>
+    /// <param name="searchScope"></param>
+    /// <param name="overrideAttributes"></param>
+    /// <returns></returns>
+    public Result<List<SearchResponse>> SearchForSingleEntryRaw(string searchContainerDn,
+                                                    string searchFilter,
+                                                    SearchScope searchScope,
+                                                    string[] overrideAttributes = null)
+    {
+        List<SearchResponse> result = new();
+        SearchResponse? response = null;
+        int maxResultsToRequest = 200;
+
+        try
+        {
+            PageResultRequestControl pageRequestControl = new(maxResultsToRequest);
+
+            // used to retrieve the cookie to send for the subsequent request
+            PageResultResponseControl pageResponseControl;
+            if (overrideAttributes == null)
+            {
+                overrideAttributes = AttributeRetrieverMgr.Attributes;
+            }
+
+            SearchRequest searchRequest = new(searchContainerDn,
+                                              searchFilter,
+                                              searchScope,
+                                              overrideAttributes);
+            searchRequest.Controls.Add(pageRequestControl);
+
+            while (true)
+            {
+                response = (SearchResponse)_ldapConnection.SendRequest(searchRequest);
+                result.Add(response);
+                pageResponseControl = (PageResultResponseControl)response.Controls[0];
+                if (pageResponseControl.Cookie.Length == 0)
+                {
+                    break;
+                }
+
+                pageRequestControl.Cookie = pageResponseControl.Cookie;
+            }
+        }
+        catch (Exception e)
+        {
+            if (e.Message.Contains("The object does not exist"))
+            {
+                return Result.Fail(new Error("NF", EnumReasonCode.NotFound));
+            }
+            return Result.Fail(new ExceptionalError($"SearchForSingleEntryRaw: [ {searchContainerDn} ]  Had Error. {e.Message}", e));
         }
 
         return Result.Ok(result);
@@ -297,6 +383,41 @@ public abstract class ADpBaseProcessor
             return Result.Fail(new ExceptionalError("Failed to add OU: " + e.Message, e));
         }
 
+    }
+
+
+
+    /// <summary>
+    ///   Moves an AD object
+    /// </summary>
+    /// <param name="currentDn">The distinguished name of the object to be moved</param>
+    /// <param name="destinationParentPath">The path of the destination parent container</param>
+    /// <param name="newName">Should just be the new name, without the attribute prefix</param>
+    /// <returns></returns>
+    protected Result<string> Move(string currentDn, ADSPath destinationParentPath, string newName)
+    {
+        try
+        {
+            if (newName.Length < 3)
+                newName = NameAttributeName + "=" + newName;
+
+            if (newName[2] != '=')
+                newName = NameAttributeName + "=" + newName;
+            
+            ModifyDNRequest  modifyDNRequest  = new(currentDn, destinationParentPath.Path, newName);
+            ModifyDNResponse modifyDNResponse = (ModifyDNResponse)_ldapConnection.SendRequest(modifyDNRequest);
+            if (modifyDNResponse.ResultCode == ResultCode.Success)
+            {
+                ADSPath path = new ADSPath(destinationParentPath.Path,newName);
+                return Result.Ok(path.Path);
+            }
+
+            return Result.Fail("Failed to move " + ObjectEnglishName + ": " + modifyDNResponse.ErrorMessage + " [ " + modifyDNResponse.ResultCode + " ]");
+        }
+        catch (Exception e)
+        {
+            return Result.Fail(new ExceptionalError($"Failed to move {ObjectEnglishName}: {currentDn}  Error: {e.Message}", e));
+        }
     }
 
 
