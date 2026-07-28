@@ -25,6 +25,7 @@ public class ADpCommon
     public const string ATN_FIRSTNAME    = "givenName";
     public const string ATN_LASTNAME     = "sn";
     public const string ATN_MANAGER      = "manager";
+    public const string ATN_OFFICE       = "physicalDeliveryOfficeName";  
     public const string ATN_PASSWORD     = "unicodePwd";
     public const string ATN_PASSWORD_LAST_SET = "pwdLastSet";
     public const string ATN_USER_ACCOUNT_CONTROL = "userAccountControl";

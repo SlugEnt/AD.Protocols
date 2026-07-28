@@ -1,11 +1,7 @@
 ﻿using AD.Protocols.ADObjects;
-using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
 using System.DirectoryServices.Protocols;
-using Bogus;
-using UT;
 using UT.CustomSupportObjects;
-using UT.SupportObjects;
 
 namespace Test.ADProtocols;
 
@@ -18,13 +14,14 @@ public class Test_User
 #pragma warning disable NUnit2045
 
     private Ad_SupportInitializer asi;
-
+    private ADpUserProcessor _userProcessor;
 
     [SetUp]
     public void Setup()
     {
         asi = Ad_SupportInitializer.GetInitializer();
         asi.Initialize();
+        _userProcessor = new ADpUserProcessor(asi.ADConnector.LdapConnection);
     }
     #endregion
 
@@ -38,12 +35,11 @@ public class Test_User
         // A  --> Setup
         string  name = asi.Faker.Person.FullName;
         ADpUser user = new ADpUser(name,asi.UnitTestParent);
-        ADpUserProcessor userProcessor = new ADpUserProcessor(asi.ADConnector.LdapConnection);
 
         // B  --> Post Setup Confirmation
 
         // C  --> Action
-        Result x = userProcessor.AddNew(user);
+        Result x = _userProcessor.AddNew(user);
         
 
         // V  -- Verify
@@ -51,7 +47,7 @@ public class Test_User
         Assert.That(user.DistinguishedName, Is.Not.Null.And.Not.Empty, "[V_110] User DistinguishedName is null or empty");
         
         // Confirm it's in AD
-        Result<ADpUser> result = userProcessor.Get(user.DistinguishedName).Value;
+        Result<ADpUser> result = _userProcessor.Get(user.DistinguishedName).Value;
         Assert.That(result.IsSuccess,Is.True,"[V_200] Failed to retrieve user from AD after creation.");
         ADpUser foundUser = result.Value;
         Assert.That(foundUser, Is.Not.Null, "[V_200] Failed to retrieve user from AD after creation.");
@@ -59,7 +55,7 @@ public class Test_User
         Assert.That(foundUser.EqualSameUser(user),Is.True, "[V_220] Retrieved user has incorrect Name.");
 
         // Z -- Delete the user
-        Result z = userProcessor.Delete(foundUser);
+        Result z = _userProcessor.Delete(foundUser);
         Assert.That(z.IsSuccess,Is.True,"[Z_100] Failed to delete user from AD.");
     }
 
@@ -75,8 +71,7 @@ public class Test_User
 
         // Create Test User Basic
         ADpUser          testUser      = asi.CreateRandomUserNew(newOu.Path);
-        ADpUserProcessor userProcessor = new ADpUserProcessor(asi.ADConnector.LdapConnection);
-        Result result = userProcessor.AddNew(testUser);
+        Result result = _userProcessor.AddNew(testUser);
         Assert.That(result.IsSuccess, Is.True, "[A_100]  Failed to add test user.");
 
 
@@ -84,17 +79,17 @@ public class Test_User
         string  priorDn    = testUser.DistinguishedName;
         ADSPath priorPath  = testUser.ParentPath;
         
-        Result  moveResult = userProcessor.Move(testUser, moveToOu.Path);
+        Result  moveResult = _userProcessor.Move(testUser, moveToOu.Path);
         Assert.That(moveResult.IsSuccess, Is.True, "C-100:  User move failed - " + moveResult.ToStringWithLineFeeds());
 
 
         // D. Verify It is in new location 
-        Result<bool> exitResult = userProcessor.Exists(testUser);
+        Result<bool> exitResult = _userProcessor.Exists(testUser);
         Assert.That(exitResult.IsSuccess, Is.True, "D-100:  Failed to check if user exists.");
         Assert.That(exitResult.Value, Is.True, "D-110:  User does not exist in the expected location.");
 
         // Verify it is not in old location
-        Result<bool> exitResultOld = userProcessor.Exists(priorDn);
+        Result<bool> exitResultOld = _userProcessor.Exists(priorDn);
         Assert.That(exitResultOld.IsSuccess, Is.True, "D-120:  Failed to check if user exists in old location.");
         Assert.That(exitResultOld.Value, Is.False, "D-130:  User still exists in the old location.");
     }
@@ -107,19 +102,18 @@ public class Test_User
         // Create 2 random OU;s
         ADpOrgUnit newOu    = asi.CreateRandomOuNew();
 
-        ADpUserProcessor userProcessor = asi.ADConnector.UserProcessor();
         ADpUser          userA         = new ADpUser(asi.Faker.Person.FullName, newOu.Path);
 
         // See if user exists.
-        Result<bool> existsResult = userProcessor.Exists(userA);
+        Result<bool> existsResult = _userProcessor.Exists(userA);
         Assert.That(existsResult.IsSuccess,Is.False, "[V_100] Failed to check if user exists.");    
 
         // Save User
-        Result x = userProcessor.AddNew(userA);
+        Result x = _userProcessor.AddNew(userA);
         Assert.That(x.IsSuccess,Is.True, "[V_110] Failed to add user.");
 
         // See if user exists.
-        Result<bool> existsResultAfterAdd = userProcessor.Exists(userA);
+        Result<bool> existsResultAfterAdd = _userProcessor.Exists(userA);
         Assert.That(existsResultAfterAdd.IsSuccess, Is.True, "[V_200] Failed to check if user exists after add.");
         Assert.That(existsResultAfterAdd.Value, Is.True, "[V_210] User was not found after add.");
     }
@@ -132,16 +126,15 @@ public class Test_User
         // Create random OU;s
         ADpOrgUnit newOu = asi.CreateRandomOuNew();
 
-        ADpUserProcessor userProcessor = asi.ADConnector.UserProcessor();
         ADpUser          userA         = new ADpUser(asi.Faker.Person.FullName, newOu.Path);
 
         // Save User
-        Result x = userProcessor.AddNew(userA);
+        Result x = _userProcessor.AddNew(userA);
         Assert.That(x.IsSuccess, Is.True, "[A_110] Failed to add user.");
 
         
         // Confirm user exists.
-        Result<bool> existsResultAfterAdd = userProcessor.Exists(userA);
+        Result<bool> existsResultAfterAdd = _userProcessor.Exists(userA);
         Assert.That(existsResultAfterAdd.IsSuccess, Is.True, "[A_200] Failed to check if user exists after add.");
         Assert.That(existsResultAfterAdd.Value, Is.True, "[A_210] User was not found after add.");
 
@@ -150,12 +143,69 @@ public class Test_User
         string newName = "john hamilton smith";
 
         // V --> Verify
-        Result<string> y = userProcessor.Rename(userA,newName);
+        Result<string> y = _userProcessor.Rename(userA,newName);
         Assert.That(y.IsSuccess, Is.True, "[V_100] Failed to rename user.");
         Assert.That(userA.CommonName, Is.EqualTo(newName), "[V_110] User was not renamed correctly.");
     }
 
 
+    /// <summary>
+    /// Tests several items related to Passwords:
+    /// Can we set the password.  Can we login.  Can we get Login info.
+    /// </summary>
+    [Test]
+    public void GoodPassword()
+    {
+        List<TestUserAttr> persons = asi.GenerateRandomPerson();
+        string password = "2026abcdef*";
+
+        // A --> Setup
+        // Create random OU;s and a random person
+        ADpOrgUnit         newOu     = asi.CreateRandomOuNew();
+        List<TestUserAttr> testUsers = asi.GenerateRandomPerson();
+        ADpUser            userA     = testUsers[0].CreateADpUser(newOu.Path);
+
+        userA.Password = password;
+        userA.UserAccountControlSetter.EnableAccount();
+
+        // Save User
+        Result x = _userProcessor.AddNew(userA);
+        Assert.That(x.IsSuccess, Is.True, "[A_110] Failed to add user.");
+
+
+        DateTimeOffset last5Seconds = DateTimeOffset.Now.UtcDateTime;
+        last5Seconds =  last5Seconds.AddSeconds(-5);
+
+        // C  --> Action
+        // Attempt to login as User
+        Result<LdapConnection> loginResult = asi.ADConnector.ConnectAsUser(userA.SAMAccount, password);
+        Assert.That(loginResult.IsSuccess, Is.True, "[C_100] Login should have succeeded with correct password.");
+
+        // V  -- Verify
+        _userProcessor.AttrRetrieval_PasswordLogonInfo();
+        
+        // Re-read User from AD and check Password fields
+        Result<ADpUser> userResult = _userProcessor.Get(userA.DistinguishedName);
+        Assert.That(userResult.IsSuccess, Is.True, "[V_100] Failed to retrieve user object after bad password attempts.");
+        ADpUser user = userResult.Value;
+
+        
+        Assert.That(user.PasswordLastSet, Is.GreaterThan(last5Seconds), "[V_110] PasswordLastSet is not within the last 5 seconds.");
+        Assert.That(user.PasswordLastSet, Is.LessThanOrEqualTo(DateTimeOffset.UtcNow),"");
+        Assert.That(user.BadPasswordCount, Is.Zero,"[V_120] BadPasswordCount is not zero after successful login.");
+        //Assert.That(user.LastLogon,Is.InRange(last5Seconds, DateTimeOffset.UtcNow), "[V_130] LastLogon is not within the last 5 seconds.");
+        
+        // Delete the user so it doesn't persist in AD
+        Result deleteResult = _userProcessor.Delete(user);
+        Assert.That(deleteResult.IsSuccess, Is.True, "[Z_100] Failed to delete user from AD.");
+
+    }
+
+
+    /// <summary>
+    /// Tests several items related to Passwords:
+    /// Can we set the password.  Can we retrieve Bad Password Count.
+    /// </summary>
     [Test]
     public void BadPassword()
     {
@@ -163,22 +213,16 @@ public class Test_User
         string        password = "2026abcdef*";
         
         // A --> Setup
-        // Create random OU;s
+        // Create random OU;s and a random person
         ADpOrgUnit newOu = asi.CreateRandomOuNew();
-
-        ADpUserProcessor userProcessor = asi.ADConnector.UserProcessor();
+        List<TestUserAttr> testUsers = asi.GenerateRandomPerson();
+        ADpUser    userA = testUsers[0].CreateADpUser(newOu.Path);
         
-        ADpUser userA = new(persons[0].FullName);
-        userA.FirstName = persons[0].FirstName;
-        userA.LastName = persons[0].LastName;
-        userA.SAMAccount= persons[0].UserId;    
-        userA.Email = persons[0].Email; 
-        userA.ParentPath = newOu.Path;
         userA.Password   = password;
         userA.UserAccountControlSetter.EnableAccount();
         
         // Save User
-        Result x = userProcessor.AddNew(userA);
+        Result x = _userProcessor.AddNew(userA);
         Assert.That(x.IsSuccess, Is.True, "[A_110] Failed to add user.");
 
 
@@ -193,7 +237,7 @@ public class Test_User
         // V  -- Verify
         // Should be 3 bad login attempts now.  Re-read User from AD and check BadPasswordCount
         // Make sure we add the retrieval of the BadPasswordCount attribute to the user processor
-        userProcessor.AttrRetrieval_PasswordLogonInfo();
+        _userProcessor.AttrRetrieval_PasswordLogonInfo();
         
 
         // Re-read User from AD and check BadPasswordCount
@@ -201,18 +245,16 @@ public class Test_User
 
         // Need to re-get the user object from AD to get the updated bad password count
         // We pass the Distinguished Name as the User object may not be fully populated if it was just created
-        Result<ADpUser> userResult = userProcessor.Get(userA.DistinguishedName);
+        Result<ADpUser> userResult = _userProcessor.Get(userA.DistinguishedName);
         Assert.That(userResult.IsSuccess, Is.True, "[V_100] Failed to retrieve user object after bad password attempts.");
         ADpUser userFromAD = userResult.Value;
 
         Assert.That(userFromAD.BadPasswordCount, Is.EqualTo(3), "[V_110] BadPasswordCount is not 3 after 3 failed attempts.");
 
         // Delete the user so it doesn't persist in AD
-        Result deleteResult = userProcessor.Delete(userFromAD);
+        Result deleteResult = _userProcessor.Delete(userFromAD);
         Assert.That(deleteResult.IsSuccess, Is.True, "[Z_100] Failed to delete user from AD.");
         
     }
-
-
 }
 

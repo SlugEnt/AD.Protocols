@@ -232,6 +232,19 @@ public class AttrDepartment : AttributeStringSingle
 
 
 /// <summary>
+///     The Office the User is in
+/// </summary>
+public class AttrOffice : AttributeStringSingle
+{
+    public AttrOffice(string value,
+                          EnumAttributeOperation changeMode = EnumAttributeOperation.Add) : base("physicalDeliveryOfficeName", changeMode)
+    {
+        DirectoryAttribute.Add(value);
+    }
+}
+
+
+/// <summary>
 ///     The Users Primary Work Number
 /// </summary>
 public class AttrWorkPhone : AttributeStringSingle

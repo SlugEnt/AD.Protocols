@@ -137,6 +137,9 @@ public class ADpUser : ADpBaseObject
                     break;
                 // We do not store a download password.
                 case "password": break;
+                case "physicalDeliveryOfficeName":
+                    Office = dirObj[0].ToString();
+                    break;
             }
         }
         
@@ -425,8 +428,33 @@ public class ADpUser : ADpBaseObject
             }
         }
     }
-
     
+
+    /// <summary>
+    /// Office user is considered a part of.
+    /// </summary>
+    public string Office
+    {
+        get;
+        set
+        {
+            field = value;
+
+            // Do not add attribute to modification list if in initial creation mode.
+            if (InCreationMode)
+                return;
+
+            string         key       = ADpCommon.ATN_OFFICE;
+            AttrOffice attrValue = new(value, EnumAttributeOperation.Modify);
+            if (!AttributesToUpdate.TryAdd(key, attrValue))
+            {
+                AttributesToUpdate[key] = attrValue;
+            }
+        }
+    }
+
+
+
     /// <summary>
     /// Password is a special case.  Return the password bytes.
     /// </summary>

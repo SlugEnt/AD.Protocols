@@ -82,7 +82,7 @@ public class Test_OU
         ouProcessor.Update(ou);
 
         // Read the object back from AD to verify the update
-        // Read the object back from AD to verify the update
+        ouProcessor.AttributeRetrieverMgr.AddAttribute("description");
         Result<ADpOrgUnit> updatedOuResult = ouProcessor.Get(ou.DistinguishedName);
 
         Assert.That(updatedOuResult.IsSuccess, Is.True, "[C-100] Failed to retrieve the updated OU from AD. Errors: " + updatedOuResult.ToStringWithLineFeeds());

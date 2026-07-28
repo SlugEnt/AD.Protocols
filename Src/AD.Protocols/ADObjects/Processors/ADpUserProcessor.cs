@@ -57,8 +57,9 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
         AttributeRetrieverMgr.AddAttribute("lockoutTime");
         AttributeRetrieverMgr.AddAttribute("lockoutDuration");
         AttributeRetrieverMgr.AddAttribute("pwdLastSet");
-        AttributeRetrieverMgr.AddAttribute("lastLogon");
-        AttributeRetrieverMgr.AddAttribute("lastLogoff");
+        // Do not appear to be updated in AD....
+        //AttributeRetrieverMgr.AddAttribute("lastLogon");
+        //AttributeRetrieverMgr.AddAttribute("lastLogoff");
         AttributeRetrieverMgr.AddAttribute("lastLogonTimestamp");
         // TODO need to add this to the ADpUser object as a DateTime property.  It is currently a long.
 //        AttributeRetrieverMgr.AddAttribute("accountExpires");

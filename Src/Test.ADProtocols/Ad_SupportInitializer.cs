@@ -1,7 +1,6 @@
-﻿using System.ComponentModel;
+﻿using System.Runtime.InteropServices;
 using AD.Protocols.ADObjects;
 using Bogus;
-using Microsoft.Testing.Extensions.VSTestBridge.Requests;
 using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
 using UT.SupportObjects;
@@ -234,14 +233,14 @@ public class Ad_SupportInitializer
         return user;
     }
 
+    
     private static Faker<TestUserAttr> PersonFaker;
-
     /// <summary>
     /// Generates a list of random person objects
     /// </summary>
     /// <param name="numberOfPeople"></param>
     /// <returns></returns>
-    public List<TestUserAttr> GenerateRandomPerson()
+    public List<TestUserAttr> GenerateRandomPerson(int peopleToGenerate = 1)
     {
         if (PersonFaker == null)
         {
@@ -256,25 +255,95 @@ public class Ad_SupportInitializer
                                    (f,
                                     p) => f.Internet.Email(p.FirstName, p.LastName))
 
+                          .RuleFor(p => p.Title, f => f.Name.JobTitle())
+                          .RuleFor(p => p.Phone, f => f.Phone.PhoneNumber())
+                          .RuleFor(p => p.Description, f => f.Lorem.Sentence())
+                          .RuleFor(p => p.Department, f => f.Commerce.Department())
+                          .RuleFor(p => p.Company, f => f.Company.CompanyName())
+                          .RuleFor( p=>p.OfficeLocation, f => f.Address.City())
+
                           // Generate standardized phone numbers and full addresses
-                          .RuleFor(p => p.UserId, f => f.Person.Random.Word())
+                          //.RuleFor(p => p.UserId, f => f.Person.Random.Word())
                           .RuleFor(p => p.FullName, f => f.Person.FullName);
         }
 
-        List<TestUserAttr> people = PersonFaker.Generate(1);
+        List<TestUserAttr> people = PersonFaker.Generate(peopleToGenerate);
         return people;
     }
 }
 
 
+/// <summary>
+/// Used for generating random user attributes for testing purposes.  This is not a real user object, but rather a set of attributes that can be used to create a user in Active Directory.
+/// </summary>
 public class TestUserAttr
 {
-    public string FirstName;
-    public string LastName;
-    public string FullName {get {return $"{FirstName} {LastName}";}}
-    public string UserId;
-    public string Email;
-    public string Phone;
-    
+    public string? FirstName;
+    public string? LastName;
+    public string? FullName {get {return $"{FirstName} {LastName}";}}
+    public string? DisplayName {get {return $"{LastName}, {FirstName}";}}
+    public string? UserId;
+    public string? Email;
+    public string? Phone;
+    public string? Title;
+    public string? ManagerDistinguishedName { get; set; }
+    public string? Department { get; set; }
+    public string? Company { get; set; }
+    public string? OfficeLocation { get; set; }
+    public string? Street { get; set; }
+    public string? City { get; set; }
+    public string? State { get; set; }
+    public string? ZipCode { get; set; }
+    public string? Country { get; set; }
+    public string? Description { get; set; }
+
+
+    /// <summary>
+    /// Createa an ADpUser object from the TestUserAttr object.  If the parentPath is null, it will leave that field blank
+    /// </summary>
+    /// <param name="parentPath"></param>
+    /// <returns></returns>
+    public ADpUser CreateADpUser(ADSPath parentPath = null)
+    {
+        ADpUser user;
+        if (parentPath != null)
+            user = new ADpUser(FullName, parentPath);
+        else 
+            user = new ADpUser(FullName);
+
+        if (FirstName != null)
+            user.FirstName = FirstName;
+        if (LastName != null)
+            user.LastName = LastName;
+        if (Email!=null)
+            user.Email = Email;
+        if (Title != null)
+            user.Title = Title;
+        if (Department != null)
+            user.DepartmentFullName = Department;
+//        if (OfficeLocation != null)
+//            user.OfficeLocation = OfficeLocation;
+/*        if (Street != null)
+            user.StreetAddress = Street;
+        if (City != null)
+            user.City = City;
+        if (State != null)
+            user.State = State;
+        if (ZipCode != null)
+            user.ZipCode = ZipCode;
+        if (Country != null)
+            user.Country = Country;
+*/
+
+        if (Description != null)
+            user.Description = Description;
+
+        // Set SAM Acct
+        Random x     = new Random();
+        int    value = x.Next(1, 99);
+        user.SAMAccount = $"{LastName}{value}";
+
+        return user;    
+    }
 }
 

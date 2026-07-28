@@ -12,7 +12,6 @@ namespace AD.Protocols.ADObjects;
 /// </summary>
 public abstract class ADpBaseObject
 {
-    
     // This must be defined this way to allow special overridding of the property in some cases.
     private string _distinguishedName = "";
     
