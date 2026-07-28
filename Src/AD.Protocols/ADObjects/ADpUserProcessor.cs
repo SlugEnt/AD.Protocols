@@ -27,7 +27,6 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     /// </summary>
     internal override void AttrRetrieval_Default()
     {
-        base.AttrRetrieval_Default();
         AttributeRetrieverMgr.AddAttribute("displayName");
         AttributeRetrieverMgr.AddAttribute("userPrincipalName");
         AttributeRetrieverMgr.AddAttribute("sAMAccountName");
@@ -67,22 +66,43 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     }
 
 
-    public void AttrRetrieval_AddUserStd()
+    /// <summary>
+    /// Derived classes should override this if they need to do anything after saving an object to AD.
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <returns></returns>
+    protected override Result AfterSave(ADpUser obj)
     {
-
-    }
-
-    /*
-    public Result Move (ADpUser user, ADSPath newParentPath)
-    {
-        Result<string> result = base.Move(user.DistinguishedName, newParentPath, user.CommonName);
-        if (result.IsSuccess)
+        // Password changes cannot be done in the same operation as other changes.
+        // If the password has been set, then we need to do a separate operation to set it.
+        if (obj.PasswordHasBeenSet)
         {
-            user.DistinguishedName = result.Value;
+            DirectoryAttributeModification passwordMod = new DirectoryAttributeModification
+            {
+                Name      = "unicodePwd",
+                Operation = DirectoryAttributeOperation.Replace
+            };
+            passwordMod.Add(obj.GetPasswordBytes);
+
+            // 4. Formulate and send the ModifyRequest
+            ModifyRequest request = new ModifyRequest(obj.DistinguishedName, passwordMod);
+
+            // (Optional) Add control to bypass password history limits if necessary
+            // request.Controls.Add(new PasswordPolicyControl()); 
+
+            ModifyResponse response = (ModifyResponse)_ldapConnection.SendRequest(request);
+
+            if (response.ResultCode == ResultCode.Success)
+            {
+                obj.PasswordHasBeenSet = false;
+                return Result.Ok();
+            }
+
+            return Result.Fail(response.ErrorMessage);
         }
 
         return Result.Ok();
+
     }
-    */
 }
 

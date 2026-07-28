@@ -1,4 +1,6 @@
 ﻿
+using SlugEnt.AD.Protocols;
+
 namespace AD.Protocols.ADObjects;
 
 
@@ -11,6 +13,15 @@ public class AttributeRetrieverMgr
 {
     private List<string> _attributesToRetrieve = new List<string>();
     private string[] _attributesToReturn;
+
+    
+    /// <summary>
+    /// Constructor
+    /// </summary>
+    public AttributeRetrieverMgr()
+    {
+        AddRequiredParameters();
+    }
     
     
     /// <summary>
@@ -58,6 +69,10 @@ public class AttributeRetrieverMgr
     {
         _attributesToRetrieve.Clear();
         _attributesToReturn = Array.Empty<string>();
+        
+        // These must always be included in the list of attributes to retrieve.
+        AddRequiredParameters();
+        
         IsFinalized         = false;
     }
 
@@ -69,6 +84,17 @@ public class AttributeRetrieverMgr
     {
         _attributesToReturn = _attributesToRetrieve.ToArray();
         IsFinalized = true;
+    }
+
+
+    /// <summary>
+    /// Attributes that must be in every retrieval.
+    /// </summary>
+    internal void AddRequiredParameters()
+    {
+        // These are required attributes and must always be included.
+        AddAttribute(ADpCommon.ATN_DISTINGUISHED_NAME);
+        AddAttribute(ADpCommon.ATN_NAME);
     }
 }
 

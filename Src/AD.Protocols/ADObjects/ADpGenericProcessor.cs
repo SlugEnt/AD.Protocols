@@ -34,32 +34,6 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
     }
     
     
-    /*
-    public Result<T> Get(string distinguishedName,
-                         ADSPath container,
-                         SearchScope searchScope,
-                         List<string> attributesToReturn)
-    {
-        
-        Result<List<T>> result = Find(container.Path,
-                                      searchScope,
-                                      searchFilter,
-                                      attributesToReturn,
-                                      true);
-        if (result.IsFailed)
-        {
-            return Result.Fail(result.Errors);
-        }
-
-        if (result.Value.Count == 0)
-        {
-            return Result.Fail($"No {ObjectEnglishName} found.");
-        }
-
-        return Result.Ok(result.Value[0]);
-    }
-    */
-
     /// <summary>
     /// Finds objects in AD based on the specified search parameters and returns them as
     /// a list of the specified type.
@@ -174,9 +148,24 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
     }
 
 
+    /// <summary>
+    /// Adds a new object to Active Directory and performs any post-save processing.
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <returns></returns>
     public Result AddNew(T obj)
     {
-        return ObjectSave(obj);
+        Result result = ObjectSave(obj);
+        if (result.IsSuccess)
+        {
+            Result x = AfterSave(obj);
+            if (x.IsSuccess)
+                return Result.Ok();
+
+            Error er = new Error("Failed in AfterSave.  Object was saved to AD successfully, but some events afterward failed.").CausedBy(x.Errors);
+            return Result.Fail(er);
+        }
+        return result;
     }
 
 
@@ -287,7 +276,7 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
     /// </summary>
     /// <param name="obj"></param>
     /// <returns></returns>
-    public Result<ModifyResponse> Update(T obj) 
+    public Result Update(T obj) 
     {
         try
         {
@@ -333,9 +322,13 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
             ModifyResponse modifyResponse = (ModifyResponse)_ldapConnection.SendRequest(modifyRequest);
             if (modifyResponse.ResultCode == ResultCode.Success)
             {
-                return Result.Ok(modifyResponse);
-            }
+                    Result x = AfterSave(obj);
+                    if (x.IsSuccess)
+                        return Result.Ok();
 
+                    Error er = new Error("Failed in AfterSave.  Object was saved to AD successfully, but some events afterward failed.").CausedBy(x.Errors);
+                    return Result.Fail(er);
+            }
             return Result.Fail($"Failed to update {ObjectEnglishName}: " + modifyResponse.ErrorMessage + " [ " + modifyResponse.ResultCode + " ]");
         }
         catch (Exception e)
@@ -389,5 +382,13 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
         obj.RenameObject(result.Value, newCommonName);
         return Result.Ok();
     }
+    
+    
+    /// <summary>
+    /// Derived classes should override this if they need to do anything after saving an object to AD.
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <returns></returns>
+    protected virtual Result AfterSave (T obj) { return Result.Ok(); }
 }
 

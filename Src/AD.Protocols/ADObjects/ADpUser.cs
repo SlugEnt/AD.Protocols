@@ -7,7 +7,14 @@ namespace AD.Protocols.ADObjects;
 
 public class ADpUser : ADpBaseObject
 {
-    private byte[] _password = [];
+    private byte[] _password           = [];
+    
+
+    /// <summary>
+    /// Used to communicate to detect password has been changed.  Password is a special case because it cannot be updated
+    /// at same time as the other attributes.
+    /// </summary>
+    internal bool PasswordHasBeenSet { get; set; }
     
     public ADpUser(string name, ADSPath parentPath)
     {
@@ -18,7 +25,7 @@ public class ADpUser : ADpBaseObject
             
             InCreationMode = true;
 
-            UserAccountControlSetter = new UserAccountControl();
+            UserAccountControlSetter = new UserAccountControl(UserAccountControlHasChanged);
             ParentPath               = parentPath;
             Name                     = name;
 
@@ -26,7 +33,26 @@ public class ADpUser : ADpBaseObject
             InCreationMode = false;
         }
     }
-    
+
+
+    /// <summary>
+    /// Constructor that starts the process of creating a new user.
+    /// </summary>
+    /// <param name="name"></param>
+    public ADpUser(string name) : base(name)
+    {
+        IsNew                    = true;
+        UserAccountControlSetter = new UserAccountControl(UserAccountControlHasChanged);
+    }
+
+
+    public ADpUser() : base()
+    {
+        IsNew                    = true;
+        UserAccountControlSetter = new UserAccountControl(UserAccountControlHasChanged);
+    }
+
+
 
     /// <summary>
     ///  Creates a User from a set of Active Directory Attributes.
@@ -78,7 +104,7 @@ public class ADpUser : ADpBaseObject
                         throw new ArgumentException("DA is not a int value - key [" + dirObj.Name + "] value: [" + dirObj[0]! + "]");
                     }
 
-                    UserAccountControlSetter = new UserAccountControl(ival);
+                    UserAccountControlSetter = new UserAccountControl(ival, UserAccountControlHasChanged);
                     break;
 
                 case "lastLogon":   LastLogon   = ADFunctions.GetDateTime_FromLDAPPropertyLong(dirObj[0].ToString()!); break;
@@ -109,6 +135,8 @@ public class ADpUser : ADpBaseObject
                 case "accountExpires":
                     AccountExpirey = ConvertADExpirationDates(dirObj);
                     break;
+                // We do not store a download password.
+                case "password": break;
             }
         }
         
@@ -138,17 +166,7 @@ public class ADpUser : ADpBaseObject
         return new ADpExpirationValue(ticks);
     }
 
-    /// <summary>
-    /// Constructor that starts the process of creating a new user.
-    /// </summary>
-    /// <param name="name"></param>
-    public ADpUser(string name) : base(name)
-    {
-        IsNew              = true;
-        UserAccountControlSetter = new UserAccountControl();
-    }
-
-
+    
 
     
     /// <summary>
@@ -177,6 +195,8 @@ public class ADpUser : ADpBaseObject
     /// <remarks>Is Internal because Processors need access to this.</remarks>
     internal override void SyncPreSave()
     {
+        // TODO  - Do not think this is necessary any longer now that we have the UserAccountControlSetter.HasChangedValue property.  But leaving it here for now.
+
         // See if UserAccountControl has been changed.  If so, we need to add it to the Attributes To Update List
         if (UserAccountControlSetter.HasChangedValue)
         {
@@ -244,12 +264,12 @@ public class ADpUser : ADpBaseObject
     /// Date and Time the password will expire.  This is computed based on the password policy in Active Directory.
     /// <para>Will be null if this attribute was not read form AD</para>
     /// </summary>
-    public ADpExpirationValue? PasswordExpiryDateTime { get; internal set; }
+    public ADpExpirationValue? PasswordExpiryDateTime { get; internal set; } = null;
 
     /// <summary>
     /// Date and time the account expires.
     /// </summary>
-    public ADpExpirationValue? AccountExpirey { get; internal set; }
+    public ADpExpirationValue? AccountExpirey { get; internal set; } = null;
 
     
     /// <summary>
@@ -406,6 +426,14 @@ public class ADpUser : ADpBaseObject
         }
     }
 
+    
+    /// <summary>
+    /// Password is a special case.  Return the password bytes.
+    /// </summary>
+    internal byte[] GetPasswordBytes
+    {
+        get => _password;
+    }
 
     /// <summary>
     /// The Password of the User.  This is the password that will be used to log in to the system.
@@ -414,7 +442,10 @@ public class ADpUser : ADpBaseObject
     {
         set
         {
-            _password = Encoding.Unicode.GetBytes("\"" + value + "\"");
+            string pwd = $"\"{value}\"";
+            
+            _password           = Encoding.Unicode.GetBytes(pwd);
+            PasswordHasBeenSet = true;
             
             // Do not add attribute to modification list if in initial creation mode.
             if (InCreationMode)
@@ -592,6 +623,20 @@ public class ADpUser : ADpBaseObject
     /// </summary>
     public UserAccountControl UserAccountControlSetter { get; }
 
+
+    private void UserAccountControlHasChanged(int value)
+    {
+        // Do not add attribute to modification list if in initial creation mode.
+        if (InCreationMode)
+            return;
+
+        string                 key       = ADpCommon.ATN_USER_ACCOUNT_CONTROL;
+        AttrUserAccountControl attrValue = new(value, EnumAttributeOperation.Modify);
+        if (!AttributesToUpdate.TryAdd(key, attrValue))
+        {
+            AttributesToUpdate[key] = attrValue;
+        }
+    }
 
     /// <summary>
     /// Returns True if the 2 user objects Distinguished Names are the same.  It checks NO other fields.

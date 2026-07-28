@@ -169,10 +169,11 @@ public class Test_OU
         ouProcessor.AttrRetrieval_Default();
         string[] attributes = ouProcessor.AttributeRetrieverMgr.Attributes;
         
-        Assert.That(attributes.Length, Is.EqualTo(3), "[V_100]");
+        Assert.That(attributes.Length, Is.EqualTo(4), "[V_100]");
         Assert.That(attributes, Does.Contain("ou"),"[V_110]");
         Assert.That(attributes, Does.Contain("cn"),"[V_120]");
         Assert.That(attributes, Does.Contain("distinguishedName"),"[V_130]");
+        Assert.That(attributes, Does.Contain("name"),"[V_140]");
     }
 
 

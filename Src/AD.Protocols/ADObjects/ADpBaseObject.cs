@@ -60,7 +60,14 @@ public abstract class ADpBaseObject
     /// The parent AD path of this object.  This is the path to the parent OU in Active Directory.
     /// If this is a new OU, then this must be set before the OU can be created.
     /// </summary>
-    public ADSPath ParentPath { get; protected set; }
+    public ADSPath ParentPath { get;
+        set
+        {
+            if (!IsNew && !InCreationMode)
+                throw new ArgumentException("Cannot change the Parent Path unless this is a new object.");
+            
+            field = value;
+        } }
 
 
     /// <summary>

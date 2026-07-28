@@ -8,9 +8,9 @@ public class UserAccountControl
 {
     // Used to detect if the value has changed from original.
     private int _originalValue = -1;
-
     private int _currentValue;
-
+    private readonly Action<int> _onChange;
+    
     /// <summary>
     /// Returns true if the value of this object has changed from the original value.  This is used to determine if the object needs to be updated in Active Directory.
     /// </summary>
@@ -151,10 +151,11 @@ public class UserAccountControl
     /// <summary>
     /// Initializes a new instance of the <see cref="UserAccountControl"/> class.
     /// </summary>
-    public UserAccountControl()
+    public UserAccountControl(Action<int> onChange)
     {
         _currentValue = 0;
         _originalValue           = 0;
+        _onChange = onChange;
     }
 
 
@@ -162,11 +163,13 @@ public class UserAccountControl
     /// Initializes a new instance of the <see cref="UserAccountControl"/> class with a specific integer value.
     /// </summary>
     /// <param name="value">The integer value representing the UserAccountControl flags.</param>
-    public UserAccountControl(int value)
+    /// <param name="onChange">The action to invoke when the value changes.</param>
+    public UserAccountControl(int value, Action<int> onChange)
     {
         _currentValue = value;
         if (_originalValue == -1 )
             _originalValue            = value;
+        _onChange = onChange;
     }
 
 
@@ -179,6 +182,7 @@ public class UserAccountControl
         set
         {
             _currentValue = value;
+            _onChange?.Invoke(value);
         }
     }
 
@@ -306,277 +310,277 @@ public class UserAccountControl
     /// <summary>
     /// Sets the account to be enabled.
     /// </summary>
-    public void EnableAccount() { _currentValue &= ~(int)UserAccountControlFlags.AccountDisabled; }
+    public void EnableAccount() { Value &= ~(int)UserAccountControlFlags.AccountDisabled; }
 
 
     /// <summary>
     /// Sets the account to be disabled.
     /// </summary>
-    public void DisableAccount() { _currentValue |= (int)UserAccountControlFlags.AccountDisabled; }
+    public void DisableAccount() { Value |= (int)UserAccountControlFlags.AccountDisabled; }
 
 
     /// <summary>
     /// Sets the flag for the user to change password at next logon.
     /// </summary>
-    public void SetPasswordMustChange() { _currentValue |= (int)UserAccountControlFlags.PasswordMustChange; }
+    public void SetPasswordMustChange() { Value |= (int)UserAccountControlFlags.PasswordMustChange; }
 
 
     /// <summary>
     /// Clears the flag for the user to change password at next logon.
     /// </summary>
-    public void ClearPasswordMustChange() { _currentValue &= ~(int)UserAccountControlFlags.PasswordMustChange; }
+    public void ClearPasswordMustChange() { Value &= ~(int)UserAccountControlFlags.PasswordMustChange; }
 
 
     /// <summary>
     /// Sets the flag for password expiration.
     /// </summary>
-    public void SetPasswordExpired() { _currentValue |= (int)UserAccountControlFlags.PasswordExpired; }
+    public void SetPasswordExpired() { Value |= (int)UserAccountControlFlags.PasswordExpired; }
 
 
     /// <summary>
     /// Clears the flag for password expiration.
     /// </summary>
-    public void ClearPasswordExpired() { _currentValue &= ~(int)UserAccountControlFlags.PasswordExpired; }
+    public void ClearPasswordExpired() { Value &= ~(int)UserAccountControlFlags.PasswordExpired; }
 
 
     /// <summary>
     /// Sets the account as a workstation account.
     /// </summary>
-    public void SetWorkstationAccount() { _currentValue |= (int)UserAccountControlFlags.WorkstationAccount; }
+    public void SetWorkstationAccount() { Value |= (int)UserAccountControlFlags.WorkstationAccount; }
 
 
     /// <summary>
     /// Clears the account as a workstation account.
     /// </summary>
-    public void ClearWorkstationAccount() { _currentValue &= ~(int)UserAccountControlFlags.WorkstationAccount; }
+    public void ClearWorkstationAccount() { Value &= ~(int)UserAccountControlFlags.WorkstationAccount; }
 
 
     /// <summary>
     /// Sets the account as a server account.
     /// </summary>
-    public void SetServerAccount() { _currentValue |= (int)UserAccountControlFlags.ServerAccount; }
+    public void SetServerAccount() { Value |= (int)UserAccountControlFlags.ServerAccount; }
 
 
     /// <summary>
     /// Clears the account as a server account.
     /// </summary>
-    public void ClearServerAccount() { _currentValue &= ~(int)UserAccountControlFlags.ServerAccount; }
+    public void ClearServerAccount() { Value &= ~(int)UserAccountControlFlags.ServerAccount; }
 
 
     /// <summary>
     /// Sets the account to have invalid syntax.
     /// </summary>
-    public void SetInvalidSyntax() { _currentValue |= (int)UserAccountControlFlags.InvalidSyntax; }
+    public void SetInvalidSyntax() { Value |= (int)UserAccountControlFlags.InvalidSyntax; }
 
 
     /// <summary>
     /// Clears the account to have invalid syntax.
     /// </summary>
-    public void ClearInvalidSyntax() { _currentValue &= ~(int)UserAccountControlFlags.InvalidSyntax; }
+    public void ClearInvalidSyntax() { Value &= ~(int)UserAccountControlFlags.InvalidSyntax; }
 
 
     /// <summary>
     /// Sets the account to be locked out.
     /// </summary>
-    public void LockAccount() { _currentValue |= (int)UserAccountControlFlags.AccountLockout; }
+    public void LockAccount() { Value |= (int)UserAccountControlFlags.AccountLockout; }
 
 
     /// <summary>
     /// Unlocks the account.
     /// </summary>
-    public void UnlockAccount() { _currentValue &= ~(int)UserAccountControlFlags.AccountLockout; }
+    public void UnlockAccount() { Value &= ~(int)UserAccountControlFlags.AccountLockout; }
 
 
     /// <summary>
     /// Sets the user as a guest user.
     /// </summary>
-    public void SetGuestUser() { _currentValue |= (int)UserAccountControlFlags.UserAccountIsGuest; }
+    public void SetGuestUser() { Value |= (int)UserAccountControlFlags.UserAccountIsGuest; }
 
 
     /// <summary>
     /// Clears the user as a guest user.
     /// </summary>
-    public void ClearGuestUser() { _currentValue &= ~(int)UserAccountControlFlags.UserAccountIsGuest; }
+    public void ClearGuestUser() { Value &= ~(int)UserAccountControlFlags.UserAccountIsGuest; }
 
 
     /// <summary>
     /// Sets the flag for the user to change their password.
     /// </summary>
-    public void SetUserMustChangePassword() { _currentValue |= (int)UserAccountControlFlags.UserMustChangePassword; }
+    public void SetUserMustChangePassword() { Value |= (int)UserAccountControlFlags.UserMustChangePassword; }
 
 
     /// <summary>
     /// Clears the flag for the user to change their password.
     /// </summary>
-    public void ClearUserMustChangePassword() { _currentValue &= ~(int)UserAccountControlFlags.UserMustChangePassword; }
+    public void ClearUserMustChangePassword() { Value &= ~(int)UserAccountControlFlags.UserMustChangePassword; }
 
 
     /// <summary>
     /// Sets the password to never expire.
     /// </summary>
-    public void SetPasswordNeverExpires() { _currentValue |= (int)UserAccountControlFlags.PasswordNeverExpires; }
+    public void SetPasswordNeverExpires() { Value |= (int)UserAccountControlFlags.PasswordNeverExpires; }
 
 
     /// <summary>
     /// Clears the password never expires flag.
     /// </summary>
-    public void ClearPasswordNeverExpires() { _currentValue &= ~(int)UserAccountControlFlags.PasswordNeverExpires; }
+    public void ClearPasswordNeverExpires() { Value &= ~(int)UserAccountControlFlags.PasswordNeverExpires; }
 
 
     /// <summary>
     /// Sets the account to be trusted for delegation.
     /// </summary>
-    public void SetTrustedForDelegation() { _currentValue |= (int)UserAccountControlFlags.TrustedForDelegation; }
+    public void SetTrustedForDelegation() { Value |= (int)UserAccountControlFlags.TrustedForDelegation; }
 
 
     /// <summary>
     /// Clears the account to be trusted for delegation.
     /// </summary>
-    public void ClearTrustedForDelegation() { _currentValue &= ~(int)UserAccountControlFlags.TrustedForDelegation; }
+    public void ClearTrustedForDelegation() { Value &= ~(int)UserAccountControlFlags.TrustedForDelegation; }
 
 
     /// <summary>
     /// Sets the account to not be trusted for delegation.
     /// </summary>
-    public void SetNotTrustedForDelegation() { _currentValue |= (int)UserAccountControlFlags.NotTrustedForDelegation; }
+    public void SetNotTrustedForDelegation() { Value |= (int)UserAccountControlFlags.NotTrustedForDelegation; }
 
 
     /// <summary>
     /// Clears the account to not be trusted for delegation.
     /// </summary>
-    public void ClearNotTrustedForDelegation() { _currentValue &= ~(int)UserAccountControlFlags.NotTrustedForDelegation; }
+    public void ClearNotTrustedForDelegation() { Value &= ~(int)UserAccountControlFlags.NotTrustedForDelegation; }
 
 
     /// <summary>
     /// Sets the account to be sensitive and not delegated.
     /// </summary>
-    public void SetSensitiveNotDelegated() { _currentValue |= (int)UserAccountControlFlags.SensitiveNotDelegated; }
+    public void SetSensitiveNotDelegated() { Value |= (int)UserAccountControlFlags.SensitiveNotDelegated; }
 
 
     /// <summary>
     /// Clears the account to be sensitive and not delegated.
     /// </summary>
-    public void ClearSensitiveNotDelegated() { _currentValue &= ~(int)UserAccountControlFlags.SensitiveNotDelegated; }
+    public void ClearSensitiveNotDelegated() { Value &= ~(int)UserAccountControlFlags.SensitiveNotDelegated; }
 
 
     /// <summary>
     /// Sets the user to not require pre-authentication for Kerberos.
     /// </summary>
-    public void SetDoNotRequirePreAuthentication() { _currentValue |= (int)UserAccountControlFlags.DoNotRequirePreAuthentication; }
+    public void SetDoNotRequirePreAuthentication() { Value |= (int)UserAccountControlFlags.DoNotRequirePreAuthentication; }
 
 
     /// <summary>
     /// Clears the flag for not requiring pre-authentication for Kerberos.
     /// </summary>
-    public void ClearDoNotRequirePreAuthentication() { _currentValue &= ~(int)UserAccountControlFlags.DoNotRequirePreAuthentication; }
+    public void ClearDoNotRequirePreAuthentication() { Value &= ~(int)UserAccountControlFlags.DoNotRequirePreAuthentication; }
 
 
     /// <summary>
     /// Sets the password never expires flag for the principal.
     /// </summary>
-    public void SetPasswordNeverExpiresFlag() { _currentValue |= (int)UserAccountControlFlags.PasswordNeverExpiresFlag; }
+    public void SetPasswordNeverExpiresFlag() { Value |= (int)UserAccountControlFlags.PasswordNeverExpiresFlag; }
 
 
     /// <summary>
     /// Clears the password never expires flag for the principal.
     /// </summary>
-    public void ClearPasswordNeverExpiresFlag() { _currentValue &= ~(int)UserAccountControlFlags.PasswordNeverExpiresFlag; }
+    public void ClearPasswordNeverExpiresFlag() { Value &= ~(int)UserAccountControlFlags.PasswordNeverExpiresFlag; }
 
 
     /// <summary>
     /// Sets the user as enabled for scheduled tasks.
     /// </summary>
-    public void SetEnabledForScheduledTasks() { _currentValue |= (int)UserAccountControlFlags.EnabledForScheduledTasks; }
+    public void SetEnabledForScheduledTasks() { Value |= (int)UserAccountControlFlags.EnabledForScheduledTasks; }
 
 
     /// <summary>
     /// Clears the user as enabled for scheduled tasks.
     /// </summary>
-    public void ClearEnabledForScheduledTasks() { _currentValue &= ~(int)UserAccountControlFlags.EnabledForScheduledTasks; }
+    public void ClearEnabledForScheduledTasks() { Value &= ~(int)UserAccountControlFlags.EnabledForScheduledTasks; }
 
 
     /// <summary>
     /// Sets the account as a temporary duplicate account.
     /// </summary>
-    public void SetTemporaryDuplicateAccount() { _currentValue |= (int)UserAccountControlFlags.TemporaryDuplicateAccount; }
+    public void SetTemporaryDuplicateAccount() { Value |= (int)UserAccountControlFlags.TemporaryDuplicateAccount; }
 
 
     /// <summary>
     /// Clears the account as a temporary duplicate account.
     /// </summary>
-    public void ClearTemporaryDuplicateAccount() { _currentValue &= ~(int)UserAccountControlFlags.TemporaryDuplicateAccount; }
+    public void ClearTemporaryDuplicateAccount() { Value &= ~(int)UserAccountControlFlags.TemporaryDuplicateAccount; }
 
 
     /// <summary>
     /// Sets the account as a normal account.
     /// </summary>
-    public void SetNormalAccount() { _currentValue |= (int)UserAccountControlFlags.NormalAccount; }
+    public void SetNormalAccount() { Value |= (int)UserAccountControlFlags.NormalAccount; }
 
 
     /// <summary>
     /// Clears the account as a normal account.
     /// </summary>
-    public void ClearNormalAccount() { _currentValue &= ~(int)UserAccountControlFlags.NormalAccount; }
+    public void ClearNormalAccount() { Value &= ~(int)UserAccountControlFlags.NormalAccount; }
 
 
     /// <summary>
     /// Sets the account as a special domain account.
     /// </summary>
-    public void SetInterdomainTrustAccount() { _currentValue |= (int)UserAccountControlFlags.InterdomainTrustAccount; }
+    public void SetInterdomainTrustAccount() { Value |= (int)UserAccountControlFlags.InterdomainTrustAccount; }
 
 
     /// <summary>
     /// Clears the account as a special domain account.
     /// </summary>
-    public void ClearInterdomainTrustAccount() { _currentValue &= ~(int)UserAccountControlFlags.InterdomainTrustAccount; }
+    public void ClearInterdomainTrustAccount() { Value &= ~(int)UserAccountControlFlags.InterdomainTrustAccount; }
 
 
     /// <summary>
     /// Sets the account as a trusted domain account.
     /// </summary>
-    public void SetWorkstationTrustAccount() { _currentValue |= (int)UserAccountControlFlags.WorkstationTrustAccount; }
+    public void SetWorkstationTrustAccount() { Value |= (int)UserAccountControlFlags.WorkstationTrustAccount; }
 
 
     /// <summary>
     /// Clears the account as a trusted domain account.
     /// </summary>
-    public void ClearWorkstationTrustAccount() { _currentValue &= ~(int)UserAccountControlFlags.WorkstationTrustAccount; }
+    public void ClearWorkstationTrustAccount() { Value &= ~(int)UserAccountControlFlags.WorkstationTrustAccount; }
 
 
     /// <summary>
     /// Sets the account as a server trust account.
     /// </summary>
-    public void SetServerTrustAccount() { _currentValue |= (int)UserAccountControlFlags.ServerTrustAccount; }
+    public void SetServerTrustAccount() { Value |= (int)UserAccountControlFlags.ServerTrustAccount; }
 
 
     /// <summary>
     /// Clears the account as a server trust account.
     /// </summary>
-    public void ClearServerTrustAccount() { _currentValue &= ~(int)UserAccountControlFlags.ServerTrustAccount; }
+    public void ClearServerTrustAccount() { Value &= ~(int)UserAccountControlFlags.ServerTrustAccount; }
 
 
     /// <summary>
     /// Sets the account to be enabled for all logon types.
     /// </summary>
-    public void SetEnabledForAllLogonTypes() { _currentValue |= (int)UserAccountControlFlags.EnabledForAllLogonTypes; }
+    public void SetEnabledForAllLogonTypes() { Value |= (int)UserAccountControlFlags.EnabledForAllLogonTypes; }
 
 
     /// <summary>
     /// Clears the account to be enabled for all logon types.
     /// </summary>
-    public void ClearEnabledForAllLogonTypes() { _currentValue &= ~(int)UserAccountControlFlags.EnabledForAllLogonTypes; }
+    public void ClearEnabledForAllLogonTypes() { Value &= ~(int)UserAccountControlFlags.EnabledForAllLogonTypes; }
 
 
     /// <summary>
     /// Sets the account as a computer account.
     /// </summary>
-    public void SetComputerAccount() { _currentValue |= (int)UserAccountControlFlags.ComputerAccount; }
+    public void SetComputerAccount() { Value |= (int)UserAccountControlFlags.ComputerAccount; }
 
 
     /// <summary>
     /// Clears the account as a computer account.
     /// </summary>
-    public void ClearComputerAccount() { _currentValue &= ~(int)UserAccountControlFlags.ComputerAccount; }
+    public void ClearComputerAccount() { Value &= ~(int)UserAccountControlFlags.ComputerAccount; }
 
 
     /// <summary>

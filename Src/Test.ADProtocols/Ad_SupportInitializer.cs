@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using AD.Protocols.ADObjects;
 using Bogus;
+using Microsoft.Testing.Extensions.VSTestBridge.Requests;
 using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
 using UT.SupportObjects;
@@ -233,22 +234,47 @@ public class Ad_SupportInitializer
         return user;
     }
 
-    /// <summary>
-    /// A Person Faker creator
-    /// </summary>
-    public static Faker<Person> PersonFaker = new Faker<Person>()
-        .RuleFor(p => p.FirstName, f=> f.Name.FirstName())
-        .RuleFor(p=>p.LastName, f=> f.Name.LastName())
-        .RuleFor(p => p.Email, (f, p) => f.Internet.Email(p.FirstName, p.LastName))
-        .RuleFor(p => p.Phone, f => f.Phone.PhoneNumber());
-    
+    private static Faker<TestUserAttr> PersonFaker;
+
     /// <summary>
     /// Generates a list of random person objects
     /// </summary>
     /// <param name="numberOfPeople"></param>
     /// <returns></returns>
-    public List<Person> GenerateRandomPeople(int numberOfPeople)
+    public List<TestUserAttr> GenerateRandomPerson()
     {
-        return PersonFaker.Generate(numberOfPeople);    
+        if (PersonFaker == null)
+        {
+            PersonFaker = new Faker<TestUserAttr>()
+
+                          // Pick realistic names
+                          .RuleFor(p => p.FirstName, f => f.Name.FirstName())
+                          .RuleFor(p => p.LastName, f => f.Name.LastName())
+
+                          // Generate context-aware email based on first and last name
+                          .RuleFor(p => p.Email,
+                                   (f,
+                                    p) => f.Internet.Email(p.FirstName, p.LastName))
+
+                          // Generate standardized phone numbers and full addresses
+                          .RuleFor(p => p.UserId, f => f.Person.Random.Word())
+                          .RuleFor(p => p.FullName, f => f.Person.FullName);
+        }
+
+        List<TestUserAttr> people = PersonFaker.Generate(1);
+        return people;
     }
 }
+
+
+public class TestUserAttr
+{
+    public string FirstName;
+    public string LastName;
+    public string FullName {get {return $"{FirstName} {LastName}";}}
+    public string UserId;
+    public string Email;
+    public string Phone;
+    
+}
+

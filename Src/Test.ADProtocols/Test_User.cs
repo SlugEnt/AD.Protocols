@@ -159,17 +159,23 @@ public class Test_User
     [Test]
     public void BadPassword()
     {
-        List<Person> persons = asi.GenerateRandomPeople(1);
-
+        List<TestUserAttr> persons  = asi.GenerateRandomPerson();
+        string        password = "2026abcdef*";
+        
         // A --> Setup
         // Create random OU;s
         ADpOrgUnit newOu = asi.CreateRandomOuNew();
 
         ADpUserProcessor userProcessor = asi.ADConnector.UserProcessor();
-        ADpUser          userA         = new ADpUser(persons[0].FullName, newOu.Path);
-        userA.SAMAccount = persons[0].UserName;
-        userA.UPN = persons[0].UserName + "@slugent.com";
-
+        
+        ADpUser userA = new(persons[0].FullName);
+        userA.FirstName = persons[0].FirstName;
+        userA.LastName = persons[0].LastName;
+        userA.SAMAccount= persons[0].UserId;    
+        userA.Email = persons[0].Email; 
+        userA.ParentPath = newOu.Path;
+        userA.Password   = password;
+        userA.UserAccountControlSetter.EnableAccount();
         
         // Save User
         Result x = userProcessor.AddNew(userA);
@@ -178,15 +184,33 @@ public class Test_User
 
         // C  --> Action
         // Attempt to login as User, but with bad password.
-        Result<LdapConnection> loginResult = asi.ADConnector.ConnectAsUser(userA.SAMAccount, "badpassword").Value;
+        Result<LdapConnection> loginResult = asi.ADConnector.ConnectAsUser(userA.SAMAccount, "badword");
         Assert.That(loginResult.IsSuccess,Is.False,"[C_100] Login should have failed with bad password.");
-        loginResult = asi.ADConnector.ConnectAsUser(userA.SAMAccount, "badpassword").Value;
-        loginResult = asi.ADConnector.ConnectAsUser(userA.SAMAccount, "badpassword").Value;
+        loginResult = asi.ADConnector.ConnectAsUser(userA.SAMAccount, "badpassword");
+        loginResult = asi.ADConnector.ConnectAsUser(userA.SAMAccount, "badpassword");
 
-        // Should be 3 bad login attempts now.  Re-read User from AD and check BadPasswordCount
-        
+
         // V  -- Verify
-        //Assert.That();
+        // Should be 3 bad login attempts now.  Re-read User from AD and check BadPasswordCount
+        // Make sure we add the retrieval of the BadPasswordCount attribute to the user processor
+        userProcessor.AttrRetrieval_PasswordLogonInfo();
+        
+
+        // Re-read User from AD and check BadPasswordCount
+        // Make sure we add the retrieval of the BadPasswordCount attribute to the user processor
+
+        // Need to re-get the user object from AD to get the updated bad password count
+        // We pass the Distinguished Name as the User object may not be fully populated if it was just created
+        Result<ADpUser> userResult = userProcessor.Get(userA.DistinguishedName);
+        Assert.That(userResult.IsSuccess, Is.True, "[V_100] Failed to retrieve user object after bad password attempts.");
+        ADpUser userFromAD = userResult.Value;
+
+        Assert.That(userFromAD.BadPasswordCount, Is.EqualTo(3), "[V_110] BadPasswordCount is not 3 after 3 failed attempts.");
+
+        // Delete the user so it doesn't persist in AD
+        Result deleteResult = userProcessor.Delete(userFromAD);
+        Assert.That(deleteResult.IsSuccess, Is.True, "[Z_100] Failed to delete user from AD.");
+        
     }
 
 

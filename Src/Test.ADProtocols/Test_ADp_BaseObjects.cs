@@ -111,7 +111,7 @@ public class Test_ADp_BaseObjects
     public void UserAccountControl_HasChangedValue_ReturnsTrueWhenValueChanged()
     {
         // A --> Setup
-        var uac = new UserAccountControl();
+        var uac = new UserAccountControl(null);
 
         // B --> Setup Verify
         Assert.That(uac.Value, Is.EqualTo(0), "[B_100] Initial value should be equal to the provided initial value.");
@@ -131,7 +131,8 @@ public class Test_ADp_BaseObjects
     public void UserAccountControl_WithInitializedValue_ReturnsTrueWhenValueChanged(int initialValue)
     {
         // A --> Setup
-        var uac = new UserAccountControl(initialValue);
+        UserAccountControlOnChangeTester uacTester = new();
+        var                              uac       = new UserAccountControl(initialValue, uacTester.Changed);
 
         // B --> Setup Verify
         Assert.That(uac.Value, Is.EqualTo(initialValue), "[B_100] Initial value should be equal to the provided initial value.");
@@ -143,6 +144,18 @@ public class Test_ADp_BaseObjects
         // V --> Verify
         Assert.That(uac.Value, Is.Not.EqualTo(initialValue), "[V_100] Value should be different after disabling account.");
         Assert.That(uac.HasChangedValue, Is.True, "[V_110] Should report changed when AccountEnabled is set.");
+        Assert.That(uacTester.Value, Is.EqualTo(uac.Value), "[V_120] OnChange should have been called with the new value.");
     }
 
+}
+
+
+public class UserAccountControlOnChangeTester
+{
+    public int Value;
+    
+    public void Changed(int value)
+    {
+        Value = value;
+    }
 }
