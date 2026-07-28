@@ -321,9 +321,10 @@ public class TestUserAttr
             user.Title = Title;
         if (Department != null)
             user.DepartmentFullName = Department;
-//        if (OfficeLocation != null)
-//            user.OfficeLocation = OfficeLocation;
-/*        if (Street != null)
+        if (OfficeLocation != null)
+            user.Office = OfficeLocation;
+        /*
+        if (Street != null)
             user.StreetAddress = Street;
         if (City != null)
             user.City = City;
@@ -333,7 +334,7 @@ public class TestUserAttr
             user.ZipCode = ZipCode;
         if (Country != null)
             user.Country = Country;
-*/
+        */
 
         if (Description != null)
             user.Description = Description;
@@ -343,6 +344,9 @@ public class TestUserAttr
         int    value = x.Next(1, 99);
         user.SAMAccount = $"{LastName}{value}";
 
+        // Set UPN
+        user.UPN = user.Email;
+        
         return user;    
     }
 }

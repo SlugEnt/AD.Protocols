@@ -43,6 +43,7 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
         AttributeRetrieverMgr.AddAttribute("mail");
         AttributeRetrieverMgr.AddAttribute("telephoneNumber");
         AttributeRetrieverMgr.AddAttribute("manager");
+        AttributeRetrieverMgr.AddAttribute("physicalDeliveryOfficeName");
     }
 
 

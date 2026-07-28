@@ -156,7 +156,6 @@ public class Test_User
     [Test]
     public void GoodPassword()
     {
-        List<TestUserAttr> persons = asi.GenerateRandomPerson();
         string password = "2026abcdef*";
 
         // A --> Setup
@@ -209,7 +208,6 @@ public class Test_User
     [Test]
     public void BadPassword()
     {
-        List<TestUserAttr> persons  = asi.GenerateRandomPerson();
         string        password = "2026abcdef*";
         
         // A --> Setup
@@ -254,7 +252,57 @@ public class Test_User
         // Delete the user so it doesn't persist in AD
         Result deleteResult = _userProcessor.Delete(userFromAD);
         Assert.That(deleteResult.IsSuccess, Is.True, "[Z_100] Failed to delete user from AD.");
+    }
+
+
+    /// <summary>
+    /// Make sure majority of user settable attributes are working on user.
+    /// </summary>
+    [Test]
+    public void UserFieldsTest()
+    {
+        // A --> Setup
+        // Create random OU;s and a random person
+        ADpOrgUnit         newOu     = asi.CreateRandomOuNew();
+        List<TestUserAttr> testUsers = asi.GenerateRandomPerson();
+        ADpUser            userA     = testUsers[0].CreateADpUser(newOu.Path);
+        string             password  = "2026abcdef*";
+        userA.Password = password;
+        userA.UserAccountControlSetter.EnableAccount();     // You must have a password set if enabling account.
+
         
+        // C. Act.
+        // Save User
+        Result x = _userProcessor.AddNew(userA);
+        Assert.That(x.IsSuccess, Is.True, $"[C_100] Failed to add user. {x.ToStringErrorOnly()}");
+
+
+        // Make sure to retrieve the user attributes from AD
+        _userProcessor.AttrRetrieval_Office();
+        _userProcessor.AttrRetrieval_Default();
+
+        // Need to re-get the user object from AD to get the updated bad password count
+        Result<ADpUser> userResult = _userProcessor.Get(userA.DistinguishedName);
+        Assert.That(userResult.IsSuccess, Is.True, "[V_100] Failed to retrieve user object after bad password attempts.");
+        ADpUser adUser = userResult.Value;
+
+        
+        // Verify
+        Assert.That(adUser.FirstName,Is.EqualTo(userA.FirstName),"[V_200] FirstName does not match.");
+        Assert.That(adUser.LastName,Is.EqualTo(userA.LastName),"[V_210] LastName does not match.");
+        Assert.That(adUser.Description, Is.EqualTo(userA.Description), "[V_230] Description does not match.");
+        Assert.That(adUser.Office, Is.EqualTo(userA.Office), "[V_240] Office does not match.");
+        Assert.That(adUser.Phone, Is.EqualTo(userA.Phone), "[V_250] Phone does not match.");
+        Assert.That(adUser.Title, Is.EqualTo(userA.Title), "[V_260] Title does not match.");
+        Assert.That(adUser.SAMAccount, Is.EqualTo(userA.SAMAccount), "[V_270] SAMAccount does not match.");
+        Assert.That(adUser.UPN, Is.EqualTo(userA.UPN), "[V_280] UPN does not match.");
+        Assert.That(adUser.FirstName, Is.EqualTo(userA.FirstName), "[V_290] FirstName does not match.");
+        Assert.That(adUser.LastName, Is.EqualTo(userA.LastName), "[V_300] LastName does not match.");
+        Assert.That(adUser.DepartmentFullName, Is.EqualTo(userA.DepartmentFullName), "[V_310] DepartmentFullName does not match.");
+        Assert.That(adUser.UPN,Is.EqualTo(userA.UPN), "[V_320] UPN does not match.");
+        // Delete the user so it doesn't persist in AD
+        Result deleteResult = _userProcessor.Delete(adUser);
+        Assert.That(deleteResult.IsSuccess, Is.True, "[Z_100] Failed to delete user from AD.");
     }
 }
 
