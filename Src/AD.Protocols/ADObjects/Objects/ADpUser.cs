@@ -46,7 +46,9 @@ public class ADpUser : ADpBaseObject
         UserAccountControlSetter = new UserAccountControl(UserAccountControlHasChanged);
     }
 
-
+    /// <summary>
+    /// Constructor that starts the process of creating a new user.
+    /// </summary>
     public ADpUser() : base()
     {
         IsNew                    = true;
@@ -146,7 +148,7 @@ public class ADpUser : ADpBaseObject
                     if (!int.TryParse(dirObj[0].ToString(), out ival))
                     {
                         throw new ArgumentException("DA is not a int value - key [" + dirObj.Name + "] value: [" + dirObj[0]! + "]");
-                    }
+                    }                                             
 
                     //UserAccountControlSetter = new UserAccountControl(ival, UserAccountControlHasChanged);
                     MsDsUserAccountControlGetter = new MsDsUserAccountControl(ival);
@@ -164,8 +166,8 @@ public class ADpUser : ADpBaseObject
         
         InCreationMode = false;
     }
-
-
+    
+    
     private ADpExpirationValue ConvertADExpirationDates(DirectoryAttribute adValue)
     {
         // This is a special case for several AD attributes (like msDS-UserPasswordExpiryTimeComputed and accountExpires)
@@ -229,7 +231,62 @@ public class ADpUser : ADpBaseObject
     /// Is true, when this object was created from an existing Active Directory object. 
     /// </summary>
     public bool IsFromActiveDirectory { get; protected set; } = false;
+
+    #region "Status Properties"
+
+
+    /// <summary>
+    /// Returns if the user account is disabled.  This is a read only property that is calculated based on the MsDsUserAccountControl attribute.  If the MsDsUserAccountControl attribute
+    /// was not retrieved from Active Directory, this property will return null indicating it is unknown.  This property will return the status of the value when it was read from AD.
+    /// <para>>It is possible you have set it to re-enabled, but not sent the change to AD yet.  In this case it still shows as disabled.</para>
+    /// </summary>
+    public bool? IsDisabled
+    {
+        get
+        {
+            if (UserAccountControlSetter == null)
+                return null;
+            return (UserAccountControlSetter.IsDisabled);
+        }
+    }
+
     
+    /// <summary>
+    /// Returns if the user account is enabled.  This is a read only property that is calculated based on the MsDsUserAccountControl attribute.  If the MsDsUserAccountControl attribute
+    /// was not retrieved from Active Directory, this property will return null indicating it is unknown.  This property will return the status of the value when it was read from AD.
+    /// <para>>It is possible you have set it to disabled, but not sent the change to AD yet.  In this case it still shows as enabled.</para>
+    /// </summary>
+    public bool? IsEnabled
+    {
+        get
+        {
+            if (UserAccountControlSetter == null)
+                return null;
+            return (UserAccountControlSetter.IsEnabled);
+        }
+    }
+    
+    
+    /// <summary>
+    /// Enables the user account.  This is a convenience method that sets the UserAccountControl attribute to enable the account.
+    /// If the account is already enabled, this method does nothing.
+    /// </summary>
+    public void EnableAccount()
+    {
+        UserAccountControlSetter.EnableAccount();
+    }
+
+
+    /// <summary>
+    /// Disables the user account.  This is a convenience method that sets the UserAccountControl attribute to disable the account.
+    /// If the account is already disabled, this method does nothing.
+    /// </summary>
+    public void DisableAccount()
+    {
+        UserAccountControlSetter.DisableAccount();
+    }
+    #endregion
+
 
     #region Info Attributes
 
@@ -662,7 +719,7 @@ public class ADpUser : ADpBaseObject
     /// </summary>
     public UserAccountControl UserAccountControlSetter { get; }
     
-    public MsDsUserAccountControl MsDsUserAccountControlGetter { get; }
+    public MsDsUserAccountControl? MsDsUserAccountControlGetter { get; }
 
 
     private void UserAccountControlHasChanged(int value)
@@ -688,5 +745,29 @@ public class ADpUser : ADpBaseObject
     {
         return string.Equals(DistinguishedName, other.DistinguishedName, StringComparison.CurrentCultureIgnoreCase);
     }
+
+
+    #region "Actions"
+
+    /// <summary>
+    /// Sets the lockoutTime attribute to 0, which unlocks the account.
+    /// This is a special case because it is not a normal attribute that can be set.
+    /// </summary>
+    public void UnlockAccount()
+    {
+        string                 key       = "lockoutTime"; 
+        AttrLockOutTime attrValue = new(0, EnumAttributeOperation.Modify);
+        
+        if (!AttributesToUpdate.TryAdd(key, attrValue))
+        {
+            AttributesToUpdate[key] = attrValue;
+        }
+
+    }
+
+
+
+    #endregion
+
 }
 

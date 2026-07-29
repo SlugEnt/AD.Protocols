@@ -355,4 +355,21 @@ public class AttrName : AttributeStringSingle
     }
 }
 
+
+/// <summary>
+///  The lockouttime attribute.  This can only be set to zero, thus it is defined as an integer - even though technically it is a DateTimeOffset
+/// </summary>
+public class AttrLockOutTime : AttributeInt
+{
+    public AttrLockOutTime(int value,
+                            EnumAttributeOperation changeMode = EnumAttributeOperation.Add) : base("lockoutTime", changeMode) 
+    {
+        if (value != 0)
+        {
+            throw new ArgumentException("LockoutTime can only be set to zero.  Otherwise it is a read-only attribute that is set by the system when the account is locked out.");
+        }
+        DirectoryAttribute.Add(value.ToString());
+    }
+}
+
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member    

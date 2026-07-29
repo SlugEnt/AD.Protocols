@@ -73,7 +73,7 @@ public abstract class ADpBaseObject
     ///     The list of attributes that have been updated since initial loading and thus
     /// if saved, will be updated in AD.  This is used to track changes to the object and only update the attributes that have changed.
     /// </summary>
-    internal Dictionary<string, AttributeBase> AttributesToUpdate = new();
+    internal Dictionary<string, AttributeBase> AttributesToUpdate { get; set; }= new();
 
 
     /// <summary>

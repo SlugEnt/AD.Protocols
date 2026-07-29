@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Reflection.Metadata.Ecma335;
+using System.Runtime.InteropServices;
 using AD.Protocols.ADObjects;
 using Bogus;
 using SlugEnt.AD.Protocols;
@@ -157,9 +158,9 @@ public class Ad_SupportInitializer
         if (parentPath == null)
             parentPath = UnitTestParent;
 
-        try
+        while (true)
         {
-            while (true)
+            try
             {
                 string newOuName = Faker.Random.Word();
 
@@ -171,7 +172,7 @@ public class Ad_SupportInitializer
                 Result<ADpOrgUnit>  result      = ouProcessor.AddNew(newOuName, parentPath);
                 if (result.IsSuccess)
                     return result.Value;
-                
+
                 if (result.IsFailed)
                 {
                     if (result.Errors[0].Message == ActiveDirectoryConnector.EXISTS)
@@ -180,13 +181,16 @@ public class Ad_SupportInitializer
                         continue;
                     }
                     else
-                        throw new Exception("[CreateRandomOuNew_100]  Failed to create the random OU at path: " + parentPath.Path + " for reason " + result.ToStringWithLineFeeds());
+                        throw new Exception("[CreateRandomOuNew_100]  Failed to create the random OU at path: " + parentPath.Path + " for reason " +
+                                            result.ToStringWithLineFeeds());
                 }
             }
-        }
-        catch (Exception e)
-        {
-            throw new Exception("[CreateRandomOuNew_200]  Failed to create the random OU at path: " + parentPath.Path + " for reason " + e.Message, e);
+
+            catch (Exception e)
+            {   // Every now and then the faker picks a bad name.
+                if (!e.Message.Contains("(BAD_NAME)"))
+                    throw new Exception("[CreateRandomOuNew_200]  Failed to create the random OU at path: " + parentPath.Path + " for reason " + e.Message, e);
+            }
         }
     }
 

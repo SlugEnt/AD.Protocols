@@ -224,7 +224,7 @@ public class UserAccountControl
     /// <summary>
     /// Checks if the account is locked out.
     /// </summary>
-    public bool IsAccountLockedOut => (_currentValue & (int)UserAccountControlFlags.AccountLockout) != 0;
+    //public bool IsAccountLockedOut => (_currentValue & (int)UserAccountControlFlags.AccountLockout) != 0;
 
     /// <summary>
     /// Checks if the user is a guest user.
@@ -605,8 +605,8 @@ public class UserAccountControl
             flags.Add("ServerAccount");
         if (HasInvalidSyntax)
             flags.Add("InvalidSyntax");
-        if (IsAccountLockedOut)
-            flags.Add("AccountLockout");
+//        if (IsAccountLockedOut)
+//            flags.Add("AccountLockout");
         if (IsGuestUser)
             flags.Add("GuestUser");
         if (UserMustChangePassword)

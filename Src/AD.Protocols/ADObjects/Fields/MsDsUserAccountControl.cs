@@ -106,8 +106,66 @@ public class MsDsUserAccountControl
         PasswordDoesNotExpire = 0x10000,
     }
 
+    public bool IsDisabled => (_currentValue & (int)UserAccountControlFlags.AccountIsDisabled) != 0;
+    public bool IsEnabled => (_currentValue & (int)UserAccountControlFlags.AccountIsDisabled) == 0;
+    /*
+    public bool IsPasswordRequired => (_currentValue & (int)UserAccountControlFlags.PasswordCannotBeChanged) != 0;
+    public bool IsNotPasswordRequired => (_currentValue & (int)UserAccountControlFlags.PasswordCannotBeChanged) == 0;
+    public bool IsPasswordNeverChanged => (_currentValue & (int)UserAccountControlFlags.PasswordCannotBeChanged) != 0;
+    public bool IsAccountLockedOut => (_currentValue & (int)UserAccountControlFlags.AccountLocked) != 0;
+    public bool IsNormalUserAccount => (_currentValue & (int)UserAccountControlFlags.NormalAccount) != 0;
+    public bool IsSmartCardRequired => (_currentValue & (int)UserAccountControlFlags.Script) != 0; // Placeholder, not a standard UAC flag
+    public bool IsWorkstationOrServer => (_currentValue & (int)UserAccountControlFlags.NormalAccount) != 0;
+    public bool HasPassword => (_currentValue & (int)UserAccountControlFlags.PasswordNotRequired) == 0;
+    public bool CannotBeChanged => (_currentValue & (int)UserAccountControlFlags.PasswordCannotBeChanged) != 0;
+    public bool IsPasswordChangeable => (_currentValue & (int)UserAccountControlFlags.PasswordCannotBeChanged) == 0;
+    */
 
+    /*
 
+    public bool MustChangePassword => (_currentValue & (int)UserAccountControlFlags.PasswordCannotBeChanged) == 0;
+
+    public bool IsPasswordExpired => (_currentValue & (int)UserAccountControlFlags.PasswordExpired) != 0;
+
+    public bool IsWorkstationAccount => (_currentValue & (int)UserAccountControlFlags.NormalAccount) != 0;
+
+    public bool IsServerAccount => (_currentValue & (int)UserAccountControlFlags.NormalAccount) != 0;
+
+    public bool HasInvalidSyntax => (_currentValue & (int)UserAccountControlFlags.Script) != 0;
+
+    public bool IsGuestUser => (_currentValue & (int)UserAccountControlFlags.Script) != 0;
+
+    public bool UserMustChangePassword => (_currentValue & (int)UserAccountControlFlags.PasswordCannotBeChanged) != 0;
+
+    public bool PasswordNeverExpires => (_currentValue & (int)UserAccountControlFlags.PasswordDoesNotExpire) != 0;
+
+    public bool IsTrustedForDelegation => (_currentValue & (int)UserAccountControlFlags.Script) != 0;
+
+    public bool IsNotTrustedForDelegation => (_currentValue & (int)UserAccountControlFlags.Script) != 0;
+
+    public bool IsSensitiveNotDelegated => (_currentValue & (int)UserAccountControlFlags.Script) != 0;  
+
+    public bool DoNotRequirePreAuthentication => (_currentValue & (int)UserAccountControlFlags.Script) != 0;
+
+    public bool PasswordNeverExpiresFlag => (_currentValue & (int)UserAccountControlFlags.PasswordDoesNotExpire) != 0;
+
+    public bool IsEnabledForScheduledTasks => (_currentValue & (int)UserAccountControlFlags.Script) != 0;
+
+    public bool IsTemporaryDuplicateAccount => (_currentValue & (int)UserAccountControlFlags.Script) != 0;
+
+    public bool IsNormalAccount => (_currentValue & (int)UserAccountControlFlags.NormalAccount) != 0;
+
+    public bool IsInterdomainTrustAccount => (_currentValue & (int)UserAccountControlFlags.Script) != 0;
+
+    public bool IsWorkstationTrustAccount => (_currentValue & (int)UserAccountControlFlags.Script) != 0;
+
+    public bool IsServerTrustAccount => (_currentValue & (int)UserAccountControlFlags.Script) != 0;
+
+    public bool IsEnabledForAllLogonTypes => (_currentValue & (int)UserAccountControlFlags.Script) != 0;
+
+    public bool IsComputerAccount => (_currentValue & (int)UserAccountControlFlags.Script) != 0;
+    */
+    
     /// <summary>
     /// Checks if the account is locked out.
     /// </summary>
@@ -117,6 +175,73 @@ public class MsDsUserAccountControl
     /// Checks if the account is not locked out.
     /// </summary>
     public bool IsNotLockedOut => (_currentValue & (int)UserAccountControlFlags.AccountLocked) == 0;
+
+
+    /// <summary>
+    /// Gets a string representation of the current UserAccountControl flags.
+    /// </summary>
+    /// <returns>A string listing the active flags.</returns>
+    public override string ToString()
+    {
+        var flags = new System.Collections.Generic.List<string>();
+
+        if (IsLockedOut)
+            flags.Add("AccountLockedOut");
+        if (IsDisabled)
+            flags.Add("Disabled");
+/*        
+        if (MustChangePassword)
+            flags.Add("PasswordMustChange");
+        if (IsPasswordExpired)
+            flags.Add("PasswordExpired");
+        if (IsWorkstationAccount)
+            flags.Add("WorkstationAccount");
+        if (IsServerAccount)
+            flags.Add("ServerAccount");
+        if (HasInvalidSyntax)
+            flags.Add("InvalidSyntax");
+        //        if (IsAccountLockedOut)
+        //            flags.Add("AccountLockout");
+        if (IsGuestUser)
+            flags.Add("GuestUser");
+        if (UserMustChangePassword)
+            flags.Add("UserMustChangePassword");
+        if (PasswordNeverExpires)
+            flags.Add("PasswordNeverExpires");
+        if (IsTrustedForDelegation)
+            flags.Add("TrustedForDelegation");
+        if (IsNotTrustedForDelegation)
+            flags.Add("NotTrustedForDelegation");
+        if (IsSensitiveNotDelegated)
+            flags.Add("SensitiveNotDelegated");
+        if (DoNotRequirePreAuthentication)
+            flags.Add("DoNotRequirePreAuthentication");
+        if (PasswordNeverExpiresFlag)
+            flags.Add("PasswordNeverExpiresFlag");
+        if (IsEnabledForScheduledTasks)
+            flags.Add("EnabledForScheduledTasks");
+        if (IsTemporaryDuplicateAccount)
+            flags.Add("TemporaryDuplicateAccount");
+        if (IsNormalAccount)
+            flags.Add("NormalAccount");
+        if (IsInterdomainTrustAccount)
+            flags.Add("InterdomainTrustAccount");
+        if (IsWorkstationTrustAccount)
+            flags.Add("WorkstationTrustAccount");
+        if (IsServerTrustAccount)
+            flags.Add("ServerTrustAccount");
+        if (IsEnabledForAllLogonTypes)
+            flags.Add("EnabledForAllLogonTypes");
+        if (IsComputerAccount)
+            flags.Add("ComputerAccount");
+*/
+        if (flags.Count == 0)
+        {
+            return "None";
+        }
+
+        return string.Join(", ", flags);
+    }
 
 }
 

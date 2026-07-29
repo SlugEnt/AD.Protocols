@@ -6,6 +6,9 @@ using System.DirectoryServices.Protocols;
 
 namespace AD.Protocols.ADObjects;
 
+/// <summary>
+/// Allows for the processing of Active Directory User objects.  This includes creating, reading, updating, and deleting users in Active Directory.
+/// </summary>
 public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
 {
     /// <summary>
@@ -15,6 +18,7 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     public ADpUserProcessor(LdapConnection ldapConnection) : base (ADpCommon.OBJ_CLASS_USER,"user",ldapConnection)
     { }
 
+    
     protected override Result<ADpUser> CreateObjectFromAttributes(SearchResultAttributeCollection attributes)
     {
         throw new NotImplementedException();
@@ -33,6 +37,7 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
         AttributeRetrieverMgr.AddAttribute("givenName");
         AttributeRetrieverMgr.AddAttribute("sn");
         AttributeRetrieverMgr.AddAttribute("description");
+        AttributeRetrieverMgr.AddAttribute("msDS-User-Account-Control-Computed");
         AttributeRetrieverMgr.AddAttribute("userAccountControl");
     }
 
@@ -63,7 +68,8 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
         //AttributeRetrieverMgr.AddAttribute("lastLogoff");
         AttributeRetrieverMgr.AddAttribute("lastLogonTimestamp");
         // TODO need to add this to the ADpUser object as a DateTime property.  It is currently a long.
-//        AttributeRetrieverMgr.AddAttribute("accountExpires");
+        //        AttributeRetrieverMgr.AddAttribute("accountExpires");
+        AttributeRetrieverMgr.AddAttribute("userAccountControl");
         AttributeRetrieverMgr.AddAttribute("msDS-UserPasswordExpiryTimeComputed");
         AttributeRetrieverMgr.AddAttribute("msDS-User-Account-Control-Computed");
     }
