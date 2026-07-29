@@ -297,6 +297,20 @@ public class AttrUserAccountControl : AttributeInt
 }
 
 
+
+/// <summary>
+///     user Account Control which is actually an integer with each bit a separete indicator.
+/// </summary>
+public class AttrMsDsUserAccountControl : AttributeInt
+{
+    public AttrMsDsUserAccountControl(int value,
+                                  EnumAttributeOperation changeMode = EnumAttributeOperation.Add) : base("msDS-User-Account-Control-Computed", changeMode)
+    {
+        DirectoryAttribute.Add(value.ToString());
+    }
+}
+
+
 /// <summary>
 /// The password Attribute
 /// </summary>

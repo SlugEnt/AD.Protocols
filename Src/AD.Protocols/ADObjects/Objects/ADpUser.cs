@@ -2,6 +2,7 @@
 using SlugEnt.AD.Protocols.Attributes;
 using System.DirectoryServices.Protocols;
 using System.Text;
+using AD.Protocols.ADObjects.Fields;
 
 namespace AD.Protocols.ADObjects;
 
@@ -139,6 +140,16 @@ public class ADpUser : ADpBaseObject
                 case "password": break;
                 case "physicalDeliveryOfficeName":
                     Office = dirObj[0].ToString();
+                    break;
+                case "msDS-User-Account-Control-Computed":
+                    // This is a read only attribute that is calculated by AD.  It is not settable.
+                    if (!int.TryParse(dirObj[0].ToString(), out ival))
+                    {
+                        throw new ArgumentException("DA is not a int value - key [" + dirObj.Name + "] value: [" + dirObj[0]! + "]");
+                    }
+
+                    //UserAccountControlSetter = new UserAccountControl(ival, UserAccountControlHasChanged);
+                    MsDsUserAccountControlGetter = new MsDsUserAccountControl(ival);
                     break;
             }
         }
@@ -650,6 +661,8 @@ public class ADpUser : ADpBaseObject
     /// that make up this value.
     /// </summary>
     public UserAccountControl UserAccountControlSetter { get; }
+    
+    public MsDsUserAccountControl MsDsUserAccountControlGetter { get; }
 
 
     private void UserAccountControlHasChanged(int value)

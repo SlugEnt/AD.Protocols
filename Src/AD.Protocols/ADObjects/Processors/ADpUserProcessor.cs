@@ -65,6 +65,7 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
         // TODO need to add this to the ADpUser object as a DateTime property.  It is currently a long.
 //        AttributeRetrieverMgr.AddAttribute("accountExpires");
         AttributeRetrieverMgr.AddAttribute("msDS-UserPasswordExpiryTimeComputed");
+        AttributeRetrieverMgr.AddAttribute("msDS-User-Account-Control-Computed");
     }
 
 

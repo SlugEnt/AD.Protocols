@@ -382,13 +382,13 @@ public class UserAccountControl
     /// <summary>
     /// Sets the account to be locked out.
     /// </summary>
-    public void LockAccount() { Value |= (int)UserAccountControlFlags.AccountLockout; }
+    //public void LockAccount() { Value |= (int)UserAccountControlFlags.AccountLockout; }
 
 
     /// <summary>
     /// Unlocks the account.
     /// </summary>
-    public void UnlockAccount() { Value &= ~(int)UserAccountControlFlags.AccountLockout; }
+    //public void UnlockAccount() { Value &= ~(int)UserAccountControlFlags.AccountLockout; }
 
 
     /// <summary>

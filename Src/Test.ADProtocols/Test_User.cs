@@ -304,5 +304,127 @@ public class Test_User
         Result deleteResult = _userProcessor.Delete(adUser);
         Assert.That(deleteResult.IsSuccess, Is.True, "[Z_100] Failed to delete user from AD.");
     }
+
+
+    /// <summary>
+    /// Runs thru an entire cycle of creating a user, enabling the account, disabling the account, and re-enabling the account.  Verifies that the account is enabled/disabled at each step.
+    /// </summary>
+    [Test]
+    public void EnableDisableAccount()
+    {
+        // A --> Setup
+
+        // Make sure to retrieve the user attributes from AD
+        _userProcessor.AttrRetrieval_Office();
+        _userProcessor.AttrRetrieval_Default();
+
+        // Create random OU;s and a random person
+        ADpOrgUnit newOu     = asi.CreateRandomOuNew();
+        List<TestUserAttr> testUsers = asi.GenerateRandomPerson();
+        ADpUser            userA     = testUsers[0].CreateADpUser(newOu.Path);
+        string             password  = "2026abcdef*";
+        userA.Password = password;
+        userA.UserAccountControlSetter.EnableAccount(); // You must have a password set if enabling account.
+
+
+        // B --> Act 1.
+        // Save User
+        Result x = _userProcessor.AddNew(userA);
+        Assert.That(x.IsSuccess, Is.True, $"[B_100] Failed to add user. {x.ToStringErrorOnly()}");
+        
+        var x2 = _userProcessor.Get(userA.DistinguishedName);
+        Assert.That(x2.IsSuccess, Is.True, "[B_110] Failed to retrieve user after adding.");
+        ADpUser userB = x2.Value;
+        Assert.That(userB.UserAccountControlSetter.IsEnabled,Is.True, "[B_120] User account is not marked as enabled.");
+        
+        // C --> Act 2. Disable the account
+        userB.UserAccountControlSetter.DisableAccount();
+        x = _userProcessor.Update(userB);
+        Assert.That(x.IsSuccess,Is.True,"[C_100] Failed to update user after disabling account.");
+
+
+        // D --> Retrieve User from AD
+        var x3 = _userProcessor.Get(userA.DistinguishedName);
+        Assert.That(x3.IsSuccess, Is.True, "[B_110] Failed to retrieve user after adding.");
+        ADpUser adUser = x3.Value;
+        Assert.That(adUser.UserAccountControlSetter.IsDisabled, Is.True, "[D_120 ] User account is not marked as disabled.");
+
+        // E --> Act 3. Re-enable the account
+        adUser.UserAccountControlSetter.EnableAccount();
+        x = _userProcessor.Update(adUser);
+        Assert.That(x.IsSuccess, Is.True, "[E_100] Failed to update user after Re-enabling account.");
+
+        // F --> Verify 
+        var x4 = _userProcessor.Get(userA.DistinguishedName);
+        Assert.That(x4.IsSuccess, Is.True, "[F_100] Failed to retrieve user after adding.");
+        ADpUser adUserB = x4.Value;
+        Assert.That(adUserB.UserAccountControlSetter.IsEnabled, Is.True, "[F_110] User account is not marked as enabled.");
+
+        // Delete the user so it doesn't persist in AD
+        Result deleteResult = _userProcessor.Delete(userA);
+        Assert.That(deleteResult.IsSuccess, Is.True, "[Z_100] Failed to delete user from AD.");
+    }
+
+
+    [Test]
+    public void AccountLockOut()
+    {
+        // A --> Setup
+
+        // Make sure to retrieve the user attributes from AD
+        _userProcessor.AttrRetrieval_Office();
+        _userProcessor.AttrRetrieval_Default();
+        _userProcessor.AttrRetrieval_PasswordLogonInfo();
+        
+        // Create random OU;s and a random person
+        ADpOrgUnit         newOu     = asi.CreateRandomOuNew();
+        List<TestUserAttr> testUsers = asi.GenerateRandomPerson();
+        ADpUser            userA     = testUsers[0].CreateADpUser(newOu.Path);
+        string             password  = "2026abcdef*";
+        userA.Password = password;
+        userA.UserAccountControlSetter.EnableAccount(); // You must have a password set if enabling account.
+
+
+        // B --> Act 1.
+        // Save User
+        Result x = _userProcessor.AddNew(userA);
+        Assert.That(x.IsSuccess, Is.True, $"[B_100] Failed to add user. {x.ToStringErrorOnly()}");
+
+        // B --> Act 2. 
+        // Login as user many times with bad password to lock the account.  The default lockout threshold is 10 bad attempts.
+        for (int i = 0; i < 20; i++)
+        {
+            var loginResult = asi.ADConnector.ConnectAsUser(userA.SAMAccount, "badword");
+            Assert.That(loginResult.IsFailed,Is.True,"[B_110] Login attempt should have failed.");
+        }
+
+        // C --> Verify locked.
+        // Retrieve the user back.
+        var x2 = _userProcessor.Get(userA.DistinguishedName);
+        Assert.That(x2.IsSuccess, Is.True, "[C_100] Failed to retrieve user.");
+        ADpUser userB = x2.Value;
+        Assert.That(userB.MsDsUserAccountControlGetter.IsLockedOut, Is.True, "[C_110] User account is marked as locked out.");
+        
+        // No way to unlock via Ldap.
+        
+        /*
+
+        // E --> Act 3. Unlock the account
+//        userB.UserAccountControlSetter.UnlockAccount();
+        x = _userProcessor.Update(userB);
+        Assert.That(x.IsSuccess, Is.True, "[E_100] Failed to update user after unlocking account.");
+
+        // F --> Verify 
+        var x4 = _userProcessor.Get(userA.DistinguishedName);
+        Assert.That(x4.IsSuccess, Is.True, "[F_100] Failed to retrieve user.");
+        ADpUser adUserB = x4.Value;
+        Assert.That(adUserB.UserAccountControlSetter.IsAccountLockedOut, Is.False, "[F_110] User account is not marked as unlocked.");
+
+        // Delete the user so it doesn't persist in AD
+        Result deleteResult = _userProcessor.Delete(userA);
+        Assert.That(deleteResult.IsSuccess, Is.True, "[Z_100] Failed to delete user from AD.");
+        */
+    }
+
 }
 
