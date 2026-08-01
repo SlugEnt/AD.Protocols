@@ -1,6 +1,5 @@
 ﻿
 using SlugEnt.AD.Protocols;
-using SlugEnt.AD.Protocols.Attributes;
 using SlugEnt.FluentResults;
 using System.DirectoryServices.Protocols;
 
@@ -111,7 +110,23 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
         }
 
         return Result.Ok();
+    }
 
+
+    /// <summary>
+    /// Returns a list of users located at a particular path in Active Directory.  This is a one-level search, so it will only return users that are direct children of the specified path.
+    /// </summary>
+    /// <param name="parentDn"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    public List<ADpUser> GetAllChildUsers(ADSPath parentDn,SearchScope searchScope = SearchScope.OneLevel)
+    {
+        string searchFilter = $"(&(objectClass={ADpCommon.OBJ_CLASS_USER}))";
+        Result<List<ADpUser>> result = Find(parentDn.Path, searchScope, searchFilter);
+        if (result.IsFailed)
+            throw new Exception($"Failed to retrieve child users under {parentDn.Path}. Error: {result.Errors[0].Message}");
+
+        return result.Value;
     }
 }
 

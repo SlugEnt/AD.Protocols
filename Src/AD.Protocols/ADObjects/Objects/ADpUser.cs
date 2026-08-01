@@ -378,31 +378,6 @@ public class ADpUser : ADpBaseObject
 
 
     /// <summary>
-    /// The Display Name of the User.  This is the name that will be displayed in the address book and other places.
-    /// </summary>
-    public string DisplayName
-    {
-        get;
-        set
-        {
-            field = value;
-
-
-            // Do not add attribute to modification list if in initial creation mode.
-            if (InCreationMode)
-                return;
-
-            string          key       = ADpCommon.ATN_DISPLAYNAME;
-            AttrDisplayName attrValue = new(value, EnumAttributeOperation.Modify);
-            if (!AttributesToUpdate.TryAdd(key, attrValue))
-            {
-                AttributesToUpdate[key] = attrValue;
-            }
-        }
-    }
-
-
-    /// <summary>
     /// The Email Address of the User.  This is the email address that will be used in the address book and other places.
     /// </summary>
     public string Email
@@ -735,17 +710,7 @@ public class ADpUser : ADpBaseObject
             AttributesToUpdate[key] = attrValue;
         }
     }
-
-    /// <summary>
-    /// Returns True if the 2 user objects Distinguished Names are the same.  It checks NO other fields.
-    /// </summary>
-    /// <param name="other"></param>
-    /// <returns></returns>
-    public bool EqualSameUser(ADpUser other)
-    {
-        return string.Equals(DistinguishedName, other.DistinguishedName, StringComparison.CurrentCultureIgnoreCase);
-    }
-
+    
 
     #region "Actions"
 

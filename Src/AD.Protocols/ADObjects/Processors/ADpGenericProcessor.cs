@@ -94,6 +94,7 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
     }
 
 
+
     protected abstract Result<T> CreateObjectFromAttributes(SearchResultAttributeCollection attributes);
 
     
@@ -144,7 +145,25 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
         {
             return Result.Fail(new ExceptionalError($"Failed to add {obj.ObjectTypeDescription}: " + ex.Message, ex));
         }
+    }
 
+
+    /// <summary>
+    /// Adds a new object to active Directory based on the specified name and parent path, and performs any post-save processing.
+    /// </summary>
+    /// <param name="name">Name to be given to the object</param>
+    /// <param name="parentPath">The parent path in Active Directory where the object will be created</param>
+    /// <returns>Result.Ok and the name of the object that was created.  Or an error if the operation failed.</returns>
+    public Result<string> AddNew(string name, ADSPath parentPath)
+    {
+        string x   = _objectClass;
+        
+        T      obj    = (T)Activator.CreateInstance(typeof(T), name, parentPath);
+        Result result = AddNew(obj);
+        if (result.IsSuccess)
+            return Result.Ok(obj.DistinguishedName);
+
+        return result;
     }
 
 

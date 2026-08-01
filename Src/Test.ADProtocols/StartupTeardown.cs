@@ -1,5 +1,8 @@
 ﻿using AD.Protocols.ADObjects;
+using AD.Protocols.ADObjects.Objects;
+using AD.Protocols.ADObjects.Processors;
 using UT.CustomSupportObjects;
+using SlugEnt.FluentResults;
 
 namespace Test.ADProtocols;
 
@@ -32,6 +35,22 @@ public class StartupTeardown
         {
             ouProcessor.Delete(ou.DistinguishedName,true);
         }
+        
+        // Delete all Groups under the UT OU.
+        ADpGroupProcessor groupProcessor = new ADpGroupProcessor(asi.ADConnector.LdapConnection);
+        List<ADpGroup> groupsToDelete = groupProcessor.GetAllChildGroups(asi.UnitTestParent);
+        foreach (ADpGroup group in groupsToDelete)
+            {
+            groupProcessor.Delete(group.DistinguishedName, true);
+            }
+
+        // Delete all Users under the UT OU.
+        ADpUserProcessor userProcessor = new ADpUserProcessor(asi.ADConnector.LdapConnection);
+        List<ADpUser> usersToDelete = userProcessor.GetAllChildUsers(asi.UnitTestParent);
+        foreach (ADpUser user in usersToDelete)
+            {
+            userProcessor.Delete(user.DistinguishedName, true);
+            }
     }
 }
 

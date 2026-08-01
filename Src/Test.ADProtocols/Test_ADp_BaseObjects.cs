@@ -70,35 +70,37 @@ public class Test_ADp_BaseObjects
     {
         // A --> Setup
         AttributeRetrieverMgr attributeRetrieverMgr = new AttributeRetrieverMgr();
+        Assert.That(attributeRetrieverMgr.Count, Is.EqualTo(2), "[A_100] Length of initial attributes array should be 2.");
+        
         attributeRetrieverMgr.AddAttribute("cn");
-        attributeRetrieverMgr.AddAttribute("distinguishedName");
+        
         
         // C --> Act
         string[] attrFinal = attributeRetrieverMgr.Attributes;
-        
+
         // V --> Verify the initial state of the attributes array
-        Assert.That(attrFinal.Length, Is.EqualTo(2), "[V_100] Length of initial attributes array should be 2.");
+        Assert.That(attrFinal.Length, Is.EqualTo(3), "[V_100] Length of initial attributes array should be 2.");
         Assert.That(attrFinal.Contains("cn"), Is.True, "[V_110] Initial array should contain 'cn'.");
         Assert.That(attrFinal.Contains("distinguishedName"), Is.True, "[V_120] Initial array should contain 'distinguishedName'.");
-
+        Assert.That(attrFinal.Contains("name"), Is.True, "[V_130] Initial array should contain 'name'.");
+        
         // Is finalized should have been set when we retrieved the attributes.
         Assert.That(attributeRetrieverMgr.IsFinalized, Is.True, "[V_200] Attribute retriever should be finalized.");
         
         // Act - Verify that attributes are added
-        Assert.That(attributeRetrieverMgr.Count, Is.EqualTo(2), "[V_210] Count should be 2.");
+        Assert.That(attributeRetrieverMgr.Count, Is.EqualTo(3), "[V_210] Count should be 3.");
 
         // Act - Verify that adding a duplicate does not change the count
         attributeRetrieverMgr.AddAttribute("cn");
-        Assert.That(attributeRetrieverMgr.Count, Is.EqualTo(2), "[V_210] Count should remain 2 after adding duplicate.");
+        Assert.That(attributeRetrieverMgr.Count, Is.EqualTo(3), "[V_210] Count should remain 3 after adding duplicate.");
         
         // Is finalized should not have changed since it was a duplicate.
         Assert.That(attributeRetrieverMgr.IsFinalized, Is.True, "[V_210] Attribute retriever should remain finalized after adding duplicate.");
-
-
+        
 
         // Act - Clear the list and verify it is empty
         attributeRetrieverMgr.Clear();
-        Assert.That(attributeRetrieverMgr.Count, Is.EqualTo(0), "[V_250] Count should be 0 after clear.");
+        Assert.That(attributeRetrieverMgr.Count, Is.EqualTo(2), "[V_250] Count should be 2 (Default Required Attributes) after clear.");
         Assert.That(attributeRetrieverMgr.IsFinalized, Is.False, "[V_260] Attribute retriever should not be finalized after clear.");
 
         // Act - Verify that retrieving Attributes after clearing still works and is empty

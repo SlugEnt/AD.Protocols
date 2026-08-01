@@ -5,6 +5,7 @@ using System.DirectoryServices.Protocols;
 using System.Net;
 using AD.Protocols;
 using AD.Protocols.ADObjects;
+using AD.Protocols.ADObjects.Processors;
 using SlugEnt.AD.Protocols.Attributes;
 
 using SearchOption = System.DirectoryServices.Protocols.SearchOption;
@@ -1982,6 +1983,16 @@ public class ActiveDirectoryConnector : EngineBase
     {
         return new ADpOrgUnitProcessor(LdapConnection);
     }
+
+
+
+    /// <summary>
+    /// Returns a new GroupProcessor to manage Groups in Active Directory.  This is the preferred way to manage Groups.
+    /// </summary>
+    /// <param name="addGroupDefaultRetrievalAttributes">If true, the set of attributes which this library considers the default set of attributes to retrieve from AD for each group object
+    /// are set.  If you wish to completely customize this list, you can set this to false OR after processor creation, clear the list and set your own.</param>
+    /// <returns></returns>
+    public ADpGroupProcessor GroupProcessor(bool addGroupDefaultRetrievalAttributes = true) { return new ADpGroupProcessor(LdapConnection,addGroupDefaultRetrievalAttributes); }
 
 
     /// <summary>

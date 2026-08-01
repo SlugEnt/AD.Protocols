@@ -14,6 +14,7 @@ public abstract class ADpBaseObject
 {
     // This must be defined this way to allow special overridding of the property in some cases.
     private string _distinguishedName = "";
+
     
     /// <summary>
     /// Internal Constructor used by the ADpOrgUnitProcessor to create an ADpOrgUnit object from an existing AD object.  This
@@ -161,8 +162,26 @@ public abstract class ADpBaseObject
         return dirAttributes.ToArray();
     }
 
-    #region "Retrieval Attributes"
+
+    /// <summary>
+    /// Returns True if the 2 AD objects Distinguished Names are the same.  It checks NO other fields.
+    /// </summary>
+    /// <param name="other"></param>
+    /// <returns></returns>
+    public bool EqualSameObject(ADpBaseObject other) { return string.Equals(DistinguishedName, other.DistinguishedName, StringComparison.CurrentCultureIgnoreCase); }
+
+
+    // Returns if 2 distinguished names are the same.  It ignores case.
+    public static bool EqualSameObject(string firstDn,
+                                       string secondDn)
+    {
+        return string.Equals(firstDn, secondDn, StringComparison.CurrentCultureIgnoreCase);
+    }
     
+    
+
+    #region "Retrieval Attributes"
+
 
     #endregion
 
@@ -234,8 +253,35 @@ public abstract class ADpBaseObject
             }
         }
     }
-        
-    
+
+    /// <summary>
+    /// The Display Name of the User.  This is the name that will be displayed in the address book and other places.
+    /// </summary>
+    public string DisplayName
+    {
+        get;
+        set
+        {
+            field = value;
+
+
+            // Do not add attribute to modification list if in initial creation mode.
+            if (InCreationMode)
+                return;
+
+            string          key       = ADpCommon.ATN_DISPLAYNAME;
+            AttrDisplayName attrValue = new(value, EnumAttributeOperation.Modify);
+            if (!AttributesToUpdate.TryAdd(key, attrValue))
+            {
+                AttributesToUpdate[key] = attrValue;
+            }
+        }
+    }
+
+
+
+
+
     /// <summary>
     /// The name of the object.  This is the same as Common Name and changing one changes the other.
     /// </summary>

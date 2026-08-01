@@ -52,7 +52,7 @@ public class Test_User
         ADpUser foundUser = result.Value;
         Assert.That(foundUser, Is.Not.Null, "[V_200] Failed to retrieve user from AD after creation.");
         Assert.That((user.ParentPath == foundUser.ParentPath),Is.True,"[V_205] Retrieved user has incorrect ParentPath.");
-        Assert.That(foundUser.EqualSameUser(user),Is.True, "[V_220] Retrieved user has incorrect Name.");
+        Assert.That(foundUser.EqualSameObject(user),Is.True, "[V_220] Retrieved user has incorrect Name.");
 
         // Z -- Delete the user
         Result z = _userProcessor.Delete(foundUser);
@@ -485,5 +485,21 @@ public class Test_User
  
     }
 
+
+    /// <summary>
+    /// Tests the AddNew method of the ADpUserProcessor class by creating a new user with a random name and adding it to Active Directory. Verifies that the user was successfully added by retrieving it from AD.
+    /// </summary>
+    [Test]
+    public void AddNew_SimpleMethod()
+    {
+        // A --> Setup
+        // Create random OU;s
+        ADpOrgUnit     newOu = asi.CreateRandomOuNew();
+        Result<string> x     = _userProcessor.AddNew(asi.Faker.Person.FullName, newOu.Path);
+
+        // Verify
+        Result<ADpUser> updatedResult = _userProcessor.Get(x.Value);
+        Assert.That(updatedResult.IsSuccess, Is.True, "[V_100] Failed to retrieve updated user.");
+    }
 }
 

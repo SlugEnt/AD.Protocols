@@ -1,6 +1,7 @@
 ﻿using System.Reflection.Metadata.Ecma335;
 using System.Runtime.InteropServices;
 using AD.Protocols.ADObjects;
+using AD.Protocols.ADObjects.Objects;
 using Bogus;
 using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
@@ -239,6 +240,9 @@ public class Ad_SupportInitializer
 
     
     private static Faker<TestUserAttr> PersonFaker;
+    private static Faker<TestGroupAttr>              GroupFaker;
+    
+    
     /// <summary>
     /// Generates a list of random person objects
     /// </summary>
@@ -274,32 +278,62 @@ public class Ad_SupportInitializer
         List<TestUserAttr> people = PersonFaker.Generate(peopleToGenerate);
         return people;
     }
+
+
+
+    /// <summary>
+    /// Creates a new random user under the parent path.  If the parent path is null, it will use the UnitTestParent property.
+    /// </summary>
+    /// <param name="parentPath">The parent path under which to create the user. If null, the UnitTestParent is used.</param>
+    /// <returns>A new ADpUser object.</returns>
+    public ADpGroup CreateRandomGroupNew(ADSPath parentPath = null)
+    {
+        if (parentPath == null)
+            parentPath = UnitTestParent;
+        string  name = Faker.Commerce.ProductName();
+        ADpGroup group = new ADpGroup(name, parentPath);
+        return group;
+    }
+
+    
+    public List<TestGroupAttr> GenerateRandomGroup(int groupsToGenerate = 1)
+    {
+        if (GroupFaker == null)
+        {
+            GroupFaker = new Faker<TestGroupAttr>()
+
+                         // Pick realistic names
+                         .RuleFor(p => p.Name, f => f.Commerce.ProductName())
+
+                         // Generate context-aware email based on first and last name
+                         .RuleFor(p => p.Email,
+                                  (f,
+                                   p) => f.Internet.Email(p.Name))
+                         .RuleFor(p => p.GroupType, f => f.PickRandom<EnumGroupType>())
+                         
+                         .RuleFor(p => p.Description, f => f.Lorem.Sentence());
+        }
+
+        List<TestGroupAttr> groups = GroupFaker.Generate(groupsToGenerate);
+        return groups;
+    }
+
 }
 
 
-/// <summary>
-/// Used for generating random user attributes for testing purposes.  This is not a real user object, but rather a set of attributes that can be used to create a user in Active Directory.
-/// </summary>
-public class TestUserAttr
+public class TestGroupAttr
 {
-    public string? FirstName;
-    public string? LastName;
-    public string? FullName {get {return $"{FirstName} {LastName}";}}
-    public string? DisplayName {get {return $"{LastName}, {FirstName}";}}
-    public string? UserId;
+    public string Name;
+
+    public string? DisplayName
+    {
+        get { return $"{Name} - {Name}"; }
+    }
+
+    public string? GroupId;
     public string? Email;
-    public string? Phone;
-    public string? Title;
-    public string? ManagerDistinguishedName { get; set; }
-    public string? Department { get; set; }
-    public string? Company { get; set; }
-    public string? OfficeLocation { get; set; }
-    public string? Street { get; set; }
-    public string? City { get; set; }
-    public string? State { get; set; }
-    public string? ZipCode { get; set; }
-    public string? Country { get; set; }
     public string? Description { get; set; }
+    public EnumGroupType GroupType { get; set; }
 
 
     /// <summary>
@@ -307,51 +341,115 @@ public class TestUserAttr
     /// </summary>
     /// <param name="parentPath"></param>
     /// <returns></returns>
-    public ADpUser CreateADpUser(ADSPath parentPath = null)
+    public ADpGroup CreateADpGroup(ADSPath parentPath)
     {
-        ADpUser user;
-        if (parentPath != null)
-            user = new ADpUser(FullName, parentPath);
-        else 
-            user = new ADpUser(FullName);
+        ADpGroup group;
+        group = new ADpGroup(Name, parentPath);
 
-        if (FirstName != null)
-            user.FirstName = FirstName;
-        if (LastName != null)
-            user.LastName = LastName;
-        if (Email!=null)
-            user.Email = Email;
-        if (Title != null)
-            user.Title = Title;
-        if (Department != null)
-            user.DepartmentFullName = Department;
-        if (OfficeLocation != null)
-            user.Office = OfficeLocation;
-        /*
-        if (Street != null)
-            user.StreetAddress = Street;
-        if (City != null)
-            user.City = City;
-        if (State != null)
-            user.State = State;
-        if (ZipCode != null)
-            user.ZipCode = ZipCode;
-        if (Country != null)
-            user.Country = Country;
-        */
+        if (Name != null)
+            group.Name = Name;
+        if (Email != null)
+            group.Email = Email;
+
 
         if (Description != null)
-            user.Description = Description;
+            group.Description = Description;
 
         // Set SAM Acct
         Random x     = new Random();
         int    value = x.Next(1, 99);
-        user.SAMAccount = $"{LastName}{value}";
+        group.SAMAccount = $"{Name}{value}";
 
-        // Set UPN
-        user.UPN = user.Email;
-        
-        return user;    
+
+        return group;
     }
+
 }
 
+
+/// <summary>
+/// Used for generating random user attributes for testing purposes.  This is not a real user object, but rather a set of attributes that can be used to create a user in Active Directory.
+/// </summary>
+public class TestUserAttr
+    {
+        public string? FirstName;
+        public string? LastName;
+
+        public string? FullName
+        {
+            get { return $"{FirstName} {LastName}"; }
+        }
+
+        public string? DisplayName
+        {
+            get { return $"{LastName}, {FirstName}"; }
+        }
+
+        public string? UserId;
+        public string? Email;
+        public string? Phone;
+        public string? Title;
+        public string? ManagerDistinguishedName { get; set; }
+        public string? Department { get; set; }
+        public string? Company { get; set; }
+        public string? OfficeLocation { get; set; }
+        public string? Street { get; set; }
+        public string? City { get; set; }
+        public string? State { get; set; }
+        public string? ZipCode { get; set; }
+        public string? Country { get; set; }
+        public string? Description { get; set; }
+
+
+        /// <summary>
+        /// Createa an ADpUser object from the TestUserAttr object.  If the parentPath is null, it will leave that field blank
+        /// </summary>
+        /// <param name="parentPath"></param>
+        /// <returns></returns>
+        public ADpUser CreateADpUser(ADSPath parentPath = null)
+        {
+            ADpUser user;
+            if (parentPath != null)
+                user = new ADpUser(FullName, parentPath);
+            else
+                user = new ADpUser(FullName);
+
+            if (FirstName != null)
+                user.FirstName = FirstName;
+            if (LastName != null)
+                user.LastName = LastName;
+            if (Email != null)
+                user.Email = Email;
+            if (Title != null)
+                user.Title = Title;
+            if (Department != null)
+                user.DepartmentFullName = Department;
+            if (OfficeLocation != null)
+                user.Office = OfficeLocation;
+            /*
+            if (Street != null)
+                user.StreetAddress = Street;
+            if (City != null)
+                user.City = City;
+            if (State != null)
+                user.State = State;
+            if (ZipCode != null)
+                user.ZipCode = ZipCode;
+            if (Country != null)
+                user.Country = Country;
+            */
+
+            if (Description != null)
+                user.Description = Description;
+
+            // Set SAM Acct
+            Random x     = new Random();
+            int    value = x.Next(1, 99);
+            user.SAMAccount = $"{LastName}{value}";
+
+            // Set UPN
+            user.UPN = user.Email;
+
+            return user;
+        }
+    }
