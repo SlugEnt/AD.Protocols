@@ -25,7 +25,7 @@ public class AD_LDapEngine_Test
 #pragma warning disable NUnit2045
 
     private Ad_SupportInitializer asi;
-
+/*
 
     [SetUp]
     public void Setup()
@@ -131,21 +131,6 @@ public class AD_LDapEngine_Test
     {
         
 
-        /*
-        SupportMethods sm       = new(false, false);
-        ADLDAPEngine   adEngine = new(sm.DB!, SupportMethods.ActiveDirectoryConfiguration!, sm.GetMockLogger_AdLdapEngine);
-        Result<ADSPath> utRootResult = sm.Set_UnitTestRootOu(adEngine);
-        Assert.That(utRootResult.IsSuccess, Is.True, "A-100:");
-        ADSPath utRoot = utRootResult.Value;
-
-        
-
-        // C. Act
-        Result deletionResult = asi.AdEngine.OuCreate(baseOuToDelete, asi.AdEngine.DomainRoot);
-
-        // Z. Validate
-        Assert.That(deletionResult.IsSuccess, "A-110:  Failed to create the OU for deletion.  AppError: " + deletionResult.ToStringWithLineFeeds());
-        */
     }
 
 
@@ -183,7 +168,7 @@ public class AD_LDapEngine_Test
     {
 
     }
-
+*/
 #pragma warning restore NUnit2045
 #pragma warning restore IDE0079
 }

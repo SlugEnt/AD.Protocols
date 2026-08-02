@@ -75,19 +75,21 @@ public class Program
 
         
         ADSPath grp = UnitTestParent;
-        Result<List<ADpReadOnlyGroup>> resultF = activeDirectoryConnector.GroupFindOneOrMore("OU=UT_Groups,DC=ycy4y,DC=local",
-                                                                                    SearchScope.OneLevel,
-                                                                                    searchFilter,
-                                                                                    attributes);
-        if (resultF.IsSuccess)
-        {
-            List<ADpReadOnlyGroup> groups = resultF.Value;
-            foreach (var group in groups)
-            {
-                Console.WriteLine(group.Name);
-            }
-        }
-        else 
-            Console.WriteLine(resultF.ToStringErrorOnly());
+        /*        Result<List<ADpReadOnlyGroup>> resultF = activeDirectoryConnector.GroupFindOneOrMore("OU=UT_Groups,DC=ycy4y,DC=local",
+                                                                                            SearchScope.OneLevel,
+                                                                                            searchFilter,
+                                                                                            attributes);
+                if (resultF.IsSuccess)
+                {
+                    List<ADpReadOnlyGroup> groups = resultF.Value;
+                    foreach (var group in groups)
+                    {
+                        Console.WriteLine(group.Name);
+                    }
+                }
+                else 
+                    Console.WriteLine(resultF.ToStringErrorOnly());
+        */
     }
+
 }

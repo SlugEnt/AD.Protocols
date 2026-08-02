@@ -52,13 +52,15 @@ public class Test_OU
     {
         // A --> Setup
 
-        Result<ADSPath> newOuResult;
+        Result<ADpOrgUnit> newOuResult;
         ADSPath         parentOu = asi.UnitTestParent;
         string ouName = asi.Faker.Random.Word();
 
-        newOuResult = asi.ADConnector.OuCreate(ouName, parentOu);
+        ADpOrgUnitProcessor ouProcessor = asi.ADConnector.OrgUnitProcessor();
+        newOuResult = ouProcessor.AddNew(ouName, parentOu);
         
         Assert.That(newOuResult.IsSuccess, Is.True, "[V-100]  Unable to create the unique containing OU for this test.  Errors: " + newOuResult.ToStringWithLineFeeds());
+        Assert.That(newOuResult.Value,Is.Not.Null, "[V-110]  The created OU is null.");
     }
     
 

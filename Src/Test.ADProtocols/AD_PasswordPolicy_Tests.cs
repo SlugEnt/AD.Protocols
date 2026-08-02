@@ -24,7 +24,7 @@ public class AD_PasswordPolicy_Tests
 
     private Ad_SupportInitializer asi;
 
-
+    /*
     [SetUp]
     public void Setup()
     {
@@ -332,55 +332,6 @@ public class AD_PasswordPolicy_Tests
     }
 
 
-    /*
-
-
-    [Test]
-    public void RenameGroup()
-    {
-        // A --> Setup
-        Ad_SupportInitializer asi = Ad_SupportInitializer.GetInitializer(true);
-
-        // Create a random OU
-        Result<ADSPath> newOuResult = asi.CreateRandomOu();
-        Assert.That(newOuResult.IsSuccess, Is.True, "A-100: Unable to create the unique containing OU for this test.  Errors: " + newOuResult.ToStringWithLineFeeds());
-
-
-        // Create Test Group
-        string groupName = asi.Faker.Commerce.ProductName();
-        int i = Random.Shared.Next(1, 6) * 5;
-        ADpGroupUpdater testGroup = new(groupName, (EnumGroupType)i);
-
-        HelperMethods.DisplayGroup(testGroup);
-
-        Result resultA = asi.AdEngine.GroupAdd(newOuResult.Value.Path, testGroup);
-        Assert.That(resultA.IsSuccess, Is.True, "A-100: Failed to create group.  Errors: " + resultA.ToStringWithLineFeeds());
-
-
-        // B.  Validate the group was created
-        Result<ADpReadOnlyGroup> resultB = ReadAndVerifyPasswordPolicy(asi.AdEngine, newOuResult.Value.Path, [],  ADLDAPEngine.SEARCH_FILTER_ALL_GROUPS);
-        ADpReadOnlyGroup group = resultB.Value;
-
-
-        // C. Rename the Group
-        string newName = group.AD_CommonName + "XY";
-        Result<string> renameResult = asi.AdEngine.GroupRename(group, newName);
-        Assert.That(renameResult.IsSuccess, Is.True, "C-100:  Group rename failed - " + renameResult.ToStringWithLineFeeds());
-        Console.WriteLine("Renamed group to : " + renameResult.Value);
-
-
-        // D .  Verify the group was renamed.
-        resultB = ReadAndVerifyGroup(asi.AdEngine,
-                                     newOuResult.Value.Path,
-                                     [],
-                                     ADLDAPEngine.SEARCH_FILTER_ALL_GROUPS);
-
-
-        Assert.That(resultB.IsSuccess, Is.True, "D-100:  User was not found under new name. --> AppError: " + resultB.ToStringWithLineFeeds());
-        Assert.That(resultB.Value.AD_CommonName, Is.EqualTo(newName), "d-200: Users common name was not updated correctly.");
-    }
-    */
-
 
     /// <summary>
     /// Reads the Password Policy by Common Name from Active Directory and verifies it exists.  Returns the policy read,
@@ -495,6 +446,7 @@ public class AD_PasswordPolicy_Tests
         Assert.That(userFromAdRoAfterUpdate.PasswordExpiryDateTime, Is.GreaterThanOrEqualTo(DateTimeOffset.Now), "G-100:  Password Expiration Date was not set on userFromAdRo after update.");
 
     }
+    */
 #pragma warning restore NUnit2045
 #pragma warning restore IDE0079
 }

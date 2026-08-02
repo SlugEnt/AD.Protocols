@@ -112,7 +112,7 @@ public class TstUserBasic
         ATRIndex++;
     }
 
-
+    /*
     /// <summary>
     ///     Creates this user in Active Directory.
     /// </summary>
@@ -130,7 +130,7 @@ public class TstUserBasic
         return result;
     }
 
-
+    */
 
     public Result<SearchResponse> ExecuteSearch(ActiveDirectoryConnector adEngine,
                                                 ADSPath pathToStartAt,
