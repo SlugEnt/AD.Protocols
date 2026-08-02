@@ -97,7 +97,6 @@ public class Test_ADp_BaseObjects
         // Is finalized should not have changed since it was a duplicate.
         Assert.That(attributeRetrieverMgr.IsFinalized, Is.True, "[V_210] Attribute retriever should remain finalized after adding duplicate.");
         
-
         // Act - Clear the list and verify it is empty
         attributeRetrieverMgr.Clear();
         Assert.That(attributeRetrieverMgr.Count, Is.EqualTo(2), "[V_250] Count should be 2 (Default Required Attributes) after clear.");

@@ -172,9 +172,9 @@ public class Test_Group
         // Make sure to retrieve the group attributes from AD
         _groupProcessor.AttrRetrieval_Default();
 
-        // Need to re-get the group object from AD to get the updated bad password count
+        // Need to re-get the group object from AD to validate fields updated successfully
         Result<ADpGroup> groupResult = _groupProcessor.Get(groupA.DistinguishedName);
-        Assert.That(groupResult.IsSuccess, Is.True, "[V_100] Failed to retrieve group object after bad password attempts.");
+        Assert.That(groupResult.IsSuccess, Is.True, "[V_100] Failed to retrieve group object to verify field updates");
         ADpGroup adGroup = groupResult.Value;
 
 
@@ -447,6 +447,102 @@ public class Test_Group
         ADpOrgUnitProcessor ouProcessor = asi.ADConnector.OrgUnitProcessor();
         Result deleteOuResult = ouProcessor.Delete(newOu);
         Assert.That(deleteOuResult.IsSuccess, Is.True, "[Z_200] Failed to delete OU from AD.");
+    }
+
+
+    [Test]
+    public void AddNewMemberToGroup_RemoveMemberFromGroup_Success()
+    {
+        // A --> Setup
+        // Create random OU;s and a random person
+        ADpOrgUnit          newOu      = asi.CreateRandomOuNew();
+        List<TestGroupAttr> testGroups = asi.GenerateRandomGroup();
+        ADpGroup            groupA     = testGroups[0].CreateADpGroup(newOu.Path);
+        string              password   = "2026abcdef*";
+
+
+        // create user procesor
+        ADpUserProcessor userProcessor = new ADpUserProcessor(asi.ADConnector.LdapConnection);
+
+        // Create users to add to group.
+        List<TestUserAttr> testUsers              = asi.GenerateRandomPerson(2);
+        List<string>       userDistinguishedNames = new List<string>();
+
+
+        // B  --> Post Setup Confirmation
+        // Save 
+        foreach (TestUserAttr testUserAttr in testUsers)
+        {
+            ADpUser user      = testUserAttr.CreateADpUser(newOu.Path);
+            Result  userAdded = userProcessor.AddNew(user);
+            Assert.That(userAdded.IsSuccess, Is.True, $"[B_100] Failed to add user {user.DistinguishedName} to Active Directory for later Testing.");
+            userDistinguishedNames.Add(user.DistinguishedName);
+        }
+
+
+        // C --> Act.
+        // Save Group
+        Result x = _groupProcessor.AddNew(groupA);
+        Assert.That(x.IsSuccess, Is.True, $"[C_100] Failed to add group. {x.ToStringErrorOnly()}");
+
+
+        // Make sure to retrieve the group attributes from AD
+        _groupProcessor.AttrRetrieval_Default();
+
+        // D  --> Act 2 - Need to re-get the group object from AD to validate fields updated successfully
+        Result<ADpGroup> groupResult = _groupProcessor.Get(groupA.DistinguishedName);
+        Assert.That(groupResult.IsSuccess, Is.True, "[V_100] Failed to retrieve group object to verify field updates");
+        ADpGroup adGroup = groupResult.Value;
+        _groupProcessor.GetMembers(adGroup);
+
+        // E  --> Act 3 - Add a new member to the group
+        Assert.That(adGroup.Members.Count, Is.EqualTo(0),"[E_100] The group should have no members initially.");
+
+        // F  --> Act 4 - Add a new member to the group
+        adGroup.AddUserToGroup(userDistinguishedNames[0]);
+        adGroup.AddUserToGroup(userDistinguishedNames[1]);
+
+        // G  --> Act 5 - Update group in AD
+        Result gResult =  _groupProcessor.Update(adGroup);
+        Assert.That(gResult.IsSuccess, Is.True, "[G_100] Failed to update group in AD.");
+
+        // H  --> Verify - Retrieve the group again and check members
+        Result<ADpGroup> updatedGroupResult = _groupProcessor.Get(adGroup.DistinguishedName);
+        Assert.That(updatedGroupResult.IsSuccess, Is.True, "[H_100] Failed to retrieve updated group from AD.");
+        ADpGroup updatedGroup = updatedGroupResult.Value;
+        _groupProcessor.GetMembers(updatedGroup);
+        Assert.That(updatedGroup.Members.Count, Is.EqualTo(2), "[H_110] The group should have 2 members after the update.");
+
+
+        // I  --> Act 6 - Remove a member from the group
+        updatedGroup.RemoveUserFromGroup(userDistinguishedNames[1]);
+
+        // J --> Act 7 - Update group in AD - this time to remove the member
+        Result jResult = _groupProcessor.Update(updatedGroup);
+        Assert.That(jResult.IsSuccess, Is.True, "[J_100] Failed to update group in AD after member removal.");
+
+        // K --> Verify - Retrieve the group again and check members
+        Result<ADpGroup> finalGroupResult = _groupProcessor.Get(updatedGroup.DistinguishedName);
+        Assert.That(finalGroupResult.IsSuccess, Is.True, "[K_100] Failed to retrieve final group from AD.");
+        ADpGroup finalGroup = finalGroupResult.Value;
+        _groupProcessor.GetMembers(finalGroup);
+        Assert.That(finalGroup.Members.Count, Is.EqualTo(1), "[K_110] The group should have 1 member after removal.");
+        Assert.That(finalGroup.Members.Contains(userDistinguishedNames[0]), Is.True, "[K_120] The remaining member is incorrect.");
+
+        // L --> Cleanup
+        /*
+        Result userDeleteResult1 = asi.ADConnector.UserProcessor().Delete(userDistinguishedNames[0]);
+        Assert.That(userDeleteResult1.IsSuccess, Is.True, $"[L_100] Failed to delete user {userDistinguishedNames[0]} from Active Directory.");
+
+        Result userDeleteResult2 = asi.ADConnector.UserProcessor().Delete(userDistinguishedNames[1]);
+        Assert.That(userDeleteResult2.IsSuccess, Is.True, $"[L_110] Failed to delete user {userDistinguishedNames[1]} from Active Directory.");
+
+        Result groupDeleteResult = _groupProcessor.Delete(groupA);
+        Assert.That(groupDeleteResult.IsSuccess, Is.True, "[L_120] Failed to delete group from AD.");
+
+        Result deleteOuResult = asi.ADConnector.OrgUnitProcessor().Delete(newOu);
+        Assert.That(deleteOuResult.IsSuccess, Is.True, "[L_130] Failed to delete OU from AD.");
+        */
     }
 
 }

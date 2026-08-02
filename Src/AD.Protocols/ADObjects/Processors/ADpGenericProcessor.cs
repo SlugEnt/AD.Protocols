@@ -308,52 +308,56 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
             obj.SyncPreSave();
             
             DirectoryAttributeModification[] modifications = new DirectoryAttributeModification[obj.AttributesToUpdate.Count];
-            int i = 0;
-
-            foreach (KeyValuePair<string, AttributeBase> attributeBase in obj.AttributesToUpdate)
-            {
-                AttributeBase attribute = attributeBase.Value;    
+            int                              i             = 0;
             
-                // Determine the type of modification to perform on the attribute.
-                DirectoryAttributeModification modification = new()
+            if (obj.AttributesToUpdate.Count > 0)
+            {
+                foreach (KeyValuePair<string, AttributeBase> attributeBase in obj.AttributesToUpdate)
                 {
-                    Operation = ToOperation(attribute.OperationMode),
-                    Name = attribute.Name
-                };
-                if (attribute is AttributeStringSingle ass)
-                    modification.Add(ass.Value);
+                    AttributeBase attribute = attributeBase.Value;
 
-                else if (attribute is AttributeByteArray aba)
-                    modification.Add(aba.Value);
-                else if (attribute is AttributeDateTimeOffset ado)
-                    modification.Add(ado.Value);
-                else if (attribute is AttributeDateTimeOffset adt)
-                    modification.Add(adt.Value);
-                else if (attribute is AttributeInt ain)
-                    modification.Add(ain.Value);
-                else
-                {
-                    modification.AddRange((string[])attribute.Value);
+                    // Determine the type of modification to perform on the attribute.
+                    DirectoryAttributeModification modification = new()
+                    {
+                        Operation = ToOperation(attribute.OperationMode),
+                        Name      = attribute.Name
+                    };
+                    if (attribute is AttributeStringSingle ass)
+                        modification.Add(ass.Value);
+
+                    else if (attribute is AttributeByteArray aba)
+                        modification.Add(aba.Value);
+                    else if (attribute is AttributeDateTimeOffset ado)
+                        modification.Add(ado.Value);
+                    else if (attribute is AttributeDateTimeOffset adt)
+                        modification.Add(adt.Value);
+                    else if (attribute is AttributeInt ain)
+                        modification.Add(ain.Value);
+                    else
+                    {
+                        modification.AddRange((string[])attribute.Value);
+                    }
+
+                    modifications[i++] = modification;
                 }
 
-                modifications[i++] = modification;
+                ModifyRequest           modifyRequest    = new(obj.DistinguishedName, modifications);
+                PermissiveModifyControl permissiveModify = new();
+                modifyRequest.Controls.Add(permissiveModify);
+
+                ModifyResponse modifyResponse = (ModifyResponse)_ldapConnection.SendRequest(modifyRequest);
+                if (modifyResponse.ResultCode != ResultCode.Success)
+                    return Result.Fail($"Failed to update {ObjectEnglishName}: " + modifyResponse.ErrorMessage + " [ " + modifyResponse.ResultCode + " ]");
             }
 
-            ModifyRequest modifyRequest = new(obj.DistinguishedName, modifications);
-            PermissiveModifyControl permissiveModify = new();
-            modifyRequest.Controls.Add(permissiveModify);
+            // If here, either the save was successful or there were no changes to save.  Either way, we need to perform any post-save processing.
+            Result x = AfterSave(obj);
+            if (x.IsSuccess)
+                return Result.Ok();
 
-            ModifyResponse modifyResponse = (ModifyResponse)_ldapConnection.SendRequest(modifyRequest);
-            if (modifyResponse.ResultCode == ResultCode.Success)
-            {
-                    Result x = AfterSave(obj);
-                    if (x.IsSuccess)
-                        return Result.Ok();
-
-                    Error er = new Error("Failed in AfterSave.  Object was saved to AD successfully, but some events afterward failed.").CausedBy(x.Errors);
-                    return Result.Fail(er);
-            }
-            return Result.Fail($"Failed to update {ObjectEnglishName}: " + modifyResponse.ErrorMessage + " [ " + modifyResponse.ResultCode + " ]");
+            Error er = new Error("Failed in AfterSave.  Object was saved to AD successfully, but some events afterward failed.").CausedBy(x.Errors);
+            return Result.Fail(er);
+            
         }
         catch (Exception e)
         {

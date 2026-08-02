@@ -148,7 +148,7 @@ public class ADpGroupProcessor : ADpGenericProcessor<ADpGroup>
     protected override Result AfterSave(ADpGroup obj)
     {
         // If the object has members that were added or removed, process them here.
-        if (obj.NewMembers.Count > 0)
+        if (obj.NewMembers.Count > 0 || obj.RemovedMembers.Count > 0)
         {
             try
             {
@@ -162,7 +162,12 @@ public class ADpGroupProcessor : ADpGenericProcessor<ADpGroup>
                 {
                     memberModification.Add(member);
                 }
-
+                
+                foreach (string member in obj.RemovedMembers)
+                {
+                    memberModification.emove(member);
+                }
+                
 
                 // Add member to group
                 var request = new ModifyRequest(obj.DistinguishedName);
@@ -173,6 +178,11 @@ public class ADpGroupProcessor : ADpGenericProcessor<ADpGroup>
                 if (responmse.ResultCode == ResultCode.Success)
                 {
                     obj.Members.AddRange(obj.NewMembers);
+                    foreach (string member in obj.RemovedMembers)
+                    {
+                        obj.Members.Remove(member);
+                    }
+                    obj.RemovedMembers.Clear();
                     obj.NewMembers.Clear();
                     return Result.Ok();
                 }

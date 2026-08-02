@@ -171,7 +171,7 @@ public class ADpGroup : ADpBaseObject
     /// <summary>
     /// The type of AD Group this is.  This is a required attribute for creating a new group.  If this is not set, then the group cannot be created.
     /// </summary>
-    public EnumGroupType GroupType
+    public EnumGroupType? GroupType
     {
         get;
         set
@@ -179,6 +179,10 @@ public class ADpGroup : ADpBaseObject
             field = value;
             string key       = ADpCommon.ATN_GROUPTYPE;
             string typeValue = "";
+
+            // Do not add attribute to modification list if in initial creation mode.
+            if (InCreationMode)
+                return;
 
             switch (value)
             {
@@ -197,7 +201,7 @@ public class ADpGroup : ADpBaseObject
                 AttributesToUpdate[key] = attrValue;
             }
         }
-    }
+    } = null;
 
 
     /// <summary>
@@ -262,7 +266,12 @@ public class ADpGroup : ADpBaseObject
         if (!userDistinguishedName.StartsWith("CN=",StringComparison.CurrentCultureIgnoreCase))
             throw new ArgumentException("The distinguished name must start with 'CN='.", nameof(userDistinguishedName));
         NewMembers.Add(userDistinguishedName);
+
+        // If for some reason we have previously added this user to the RemovedMembers list, remove them from that list.
+        if (RemovedMembers.Contains(userDistinguishedName))
+            RemovedMembers.Remove(userDistinguishedName);
     }
+    
 
     /// <summary>
     /// Removes the specified user from the group.  The user is specified by their distinguished name.  This method adds the user to the RemovedMembers list, which will be processed when the group is updated.
@@ -279,6 +288,10 @@ public class ADpGroup : ADpBaseObject
             throw new ArgumentException("The distinguished name must start with 'CN='.", nameof(userDistinguishedName));
 
         RemovedMembers.Add(userDistinguishedName);
+        
+        // If for some reason we have previously added this user to the NewMembers list, remove them from that list.
+        if (NewMembers.Contains(userDistinguishedName))
+            NewMembers.Remove(userDistinguishedName);
     }
 }
 
