@@ -1,4 +1,5 @@
 ﻿
+using AD.Protocols.ADObjects.Objects;
 using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
 using System.DirectoryServices.Protocols;
@@ -123,10 +124,15 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     {
         string searchFilter = $"(&(objectClass={ADpCommon.OBJ_CLASS_USER}))";
         Result<List<ADpUser>> result = Find(parentDn.Path, searchScope, searchFilter);
-        if (result.IsFailed)
-            throw new Exception($"Failed to retrieve child users under {parentDn.Path}. Error: {result.Errors[0].Message}");
 
-        return result.Value;
+        if (result.IsSuccess)
+            return result.Value;
+
+        if (result.ErrorTitle == "NotFound")
+            return new List<ADpUser>();
+
+        throw new Exception($"Failed to retrieve child users under {parentDn.Path}. Error: {result.Errors[0].Message}");
+
     }
 }
 
