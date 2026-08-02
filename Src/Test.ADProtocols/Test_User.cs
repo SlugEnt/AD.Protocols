@@ -1,6 +1,8 @@
 ﻿using AD.Protocols.ADObjects;
 using SlugEnt.FluentResults;
 using System.DirectoryServices.Protocols;
+using AD.Protocols.ADObjects.Objects;
+using AD.Protocols.ADObjects.Processors;
 using UT.CustomSupportObjects;
 
 namespace Test.ADProtocols;
@@ -99,15 +101,17 @@ public class Test_User
     public void Exists_UserExist_Success()
     {
         // A --> Setup
-        // Create 2 random OU;s
+        // Create random OU;s
         ADpOrgUnit newOu    = asi.CreateRandomOuNew();
 
         ADpUser          userA         = new ADpUser(asi.Faker.Person.FullName, newOu.Path);
         Assert.That(userA.DistinguishedName,Is.Not.Empty,"[A_100] Distinguished Name should not be empty.");
+        _userProcessor.AddNew(userA);
         
         // See if user exists.
         Result<bool> existsResult = _userProcessor.Exists(userA);
         Assert.That(existsResult.IsSuccess,Is.True, "[V_100] Failed to check if user exists.");
+        Assert.That(existsResult.Value,Is.True,"[V_110] User exists should have returned true.");
     }
 
 
@@ -117,7 +121,7 @@ public class Test_User
     public void Exists_UserNotExist_Success()
     {
         // A --> Setup
-        // Create 2 random OU;s
+        // Create random OU;s
         ADpOrgUnit newOu = asi.CreateRandomOuNew();
 
         // Create a user that does NOT exist
@@ -136,7 +140,7 @@ public class Test_User
     public void Exists_UserObjWithNoDN_Success()
     {
         // A --> Setup
-        // Create 2 random OU;s
+        // Create random OU;s
         ADpOrgUnit newOu = asi.CreateRandomOuNew();
 
         // Create a user that does NOT exist
@@ -533,6 +537,160 @@ public class Test_User
         // Verify
         Result<ADpUser> updatedResult = _userProcessor.Get(x.Value);
         Assert.That(updatedResult.IsSuccess, Is.True, "[V_100] Failed to retrieve updated user.");
+    }
+
+
+    /// <summary>
+    ///  Confirms can find User BY UPN - searching sub trees.
+    /// </summary>
+    [Test]
+    public void GetUserBy_UPN()
+    {
+        // A --> Setup
+        string attrValue = "someupn@abc.com";
+        _userProcessor.AttrRetrieval_Default();
+        
+        // Create random OU;s
+        ADpOrgUnit newOu = asi.CreateRandomOuNew();
+
+        ADpUser userA = new ADpUser(asi.Faker.Person.FullName, newOu.Path);
+        userA.UPN = attrValue;
+
+        // B --> Act - Save User
+        Result x = _userProcessor.AddNew(userA);
+        Assert.That(x.IsSuccess, Is.True, "[B_100] Failed to add user.");
+
+        // Confirm user exists.
+        Result<bool> existsResultAfterAdd = _userProcessor.Exists(userA);
+        Assert.That(existsResultAfterAdd.IsSuccess, Is.True, "[B_200] Failed to check if user exists after add.");
+        Assert.That(existsResultAfterAdd.Value, Is.True, "[B_210] User was not found after add.");
+
+
+        // C --> Act - Get User by UPN
+        Result<ADpUser> getResult = _userProcessor.GetBy_UPN(attrValue, asi.UnitTestRoot);
+        Assert.That(getResult.IsSuccess, Is.True, "[C_100] Failed to get user by UPN.");
+        ADpUser userB = getResult.Value;
+
+        // D --> Verify
+        Assert.That(userB.UPN, Is.EqualTo(attrValue), "[D_100] User UPN does not match the expected value.");
+        Assert.That(ADpUser.EqualSameObject(userA.DistinguishedName,userB.DistinguishedName), Is.True, "[D_110] User distinguished names do not match.");
+    }
+
+    
+    [Test]
+    public void GetUserBy_SAMAccount()
+    {
+        // A --> Setup
+        string attrValue = "CoolUser24";
+        _userProcessor.AttrRetrieval_Default();
+
+        // Create random OU;s
+        ADpOrgUnit newOu = asi.CreateRandomOuNew();
+
+        ADpUser userA = new ADpUser(asi.Faker.Person.FullName, newOu.Path);
+        userA.SAMAccount = attrValue;
+
+        // B --> Act - Save User
+        Result x = _userProcessor.AddNew(userA);
+        Assert.That(x.IsSuccess, Is.True, "[B_100] Failed to add user.");
+
+        // Confirm user exists.
+        Result<bool> existsResultAfterAdd = _userProcessor.Exists(userA);
+        Assert.That(existsResultAfterAdd.IsSuccess, Is.True, "[B_200] Failed to check if user exists after add.");
+        Assert.That(existsResultAfterAdd.Value, Is.True, "[B_210] User was not found after add.");
+        
+
+        // C --> Act - Get User by SAM Account
+        Result<ADpUser> getResult = _userProcessor.GetBy_SAMAccount(attrValue, asi.UnitTestRoot);
+        Assert.That(getResult.IsSuccess, Is.True, "[C_100] Failed to get user by SAM Account.");
+        ADpUser userB = getResult.Value;
+
+        // D --> Verify
+        Assert.That(userB.SAMAccount, Is.EqualTo(attrValue), "[D_100] User SAM Account does not match the expected value.");
+        Assert.That(ADpUser.EqualSameObject(userA.DistinguishedName, userB.DistinguishedName), Is.True, "[D_110] User distinguished names do not match.");
+    }
+
+
+    [TestCase("givenName", "CoolUser2")]
+    [TestCase("sn", "Edwards2")]
+    [TestCase("title", "Engineer")]
+    [Test]
+    public void GetUserBy_Attribute(string attributeName, string attributeValue)
+    {
+        // A --> Setup
+        
+        _userProcessor.AttrRetrieval_Default();
+        _userProcessor.AttrRetrieval_Office();
+
+        // Create random OU;s
+        ADpOrgUnit newOu = asi.CreateRandomOuNew();
+
+        ADpUser userA = new ADpUser(asi.Faker.Person.FullName, newOu.Path);
+        if (attributeName == "givenName")
+            userA.FirstName = attributeValue;
+        else if (attributeName == "sn")
+            userA.LastName = attributeValue;
+        else if (attributeName == "title")
+            userA.Title = attributeValue;
+
+        // B --> Act - Save User
+        Result x = _userProcessor.AddNew(userA);
+        Assert.That(x.IsSuccess, Is.True, "[B_100] Failed to add user.");
+
+        // Confirm user exists.
+        Result<bool> existsResultAfterAdd = _userProcessor.Exists(userA);
+        Assert.That(existsResultAfterAdd.IsSuccess, Is.True, "[B_200] Failed to check if user exists after add.");
+        Assert.That(existsResultAfterAdd.Value, Is.True, "[B_210] User was not found after add.");
+
+
+        // C --> Act - Get User by Attribute
+        Result<List<ADpUser>> getResult = _userProcessor.GetBy_Attribute(attributeName, attributeValue, asi.UnitTestRoot);
+        Assert.That(getResult.IsSuccess, Is.True, "[C_100] Failed to get user by Attribute.");
+        List<ADpUser> users = getResult.Value;
+        
+
+        // D --> Verify
+        Assert.That(users.Count, Is.EqualTo(1), "[D_100] Expected exactly one user to be returned.");
+        ADpUser userB = users[0];
+        Assert.That(ADpUser.EqualSameObject(userA.DistinguishedName, userB.DistinguishedName), Is.True, "[D_120] User distinguished names do not match.");
+    }
+
+
+    [Test]
+    public void MemberOf()
+    {
+        // A --> Setup
+        ADpGroupProcessor groupProcessor = asi.ADConnector.GroupProcessor();
+        ADpUserProcessor  userProcessor  = asi.ADConnector.UserProcessor();
+        userProcessor.GroupsRetrievedPerRequest = 3;
+        
+        
+        // Create random OU;s., random person and some groups
+        ADpOrgUnit          newOu      = asi.CreateRandomOuNew();
+        ADpUser userA = asi.CreateRandomUserNew(newOu.Path);    
+        List<TestGroupAttr> testGroups = asi.GenerateRandomGroup(7);
+        ADpGroup            groupA     = testGroups[0].CreateADpGroup(newOu.Path);
+
+        
+        // B --> Act - Save User
+        Result xResult = userProcessor.AddNew(userA);
+        Assert.That(xResult.IsSuccess, Is.True, "[B_100] Failed to add user.");
+
+        
+        // C --> Act - Save Groups
+        foreach (TestGroupAttr testGroup in testGroups)
+        {
+            ADpGroup  group = testGroup.CreateADpGroup(newOu.Path);
+            group.AddUserToGroup(userA.DistinguishedName);
+            Result x = groupProcessor.AddNew(group);
+            Assert.That(x.IsSuccess,Is.True,"[C_100] Failed to add group.");
+        }
+
+        // D --> Act - Retrieve the Member of for the user.
+        Result getResult = userProcessor.GetMemberOfs(userA);
+        Assert.That(getResult.IsSuccess,Is.True,"[D_100] Failed to get member ofs for user.");
+        Assert.That(userA.MemberOfGroups.Count, Is.EqualTo(testGroups.Count), "[D_110] User is not a member of the expected number of groups.");
+
     }
 }
 

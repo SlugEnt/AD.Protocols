@@ -99,7 +99,7 @@ public class ADpUser : ADpBaseObject
                 case "memberOf":
                     for (int i = 0; i < dirObj.Count; i++)
                     {
-                        MemberOf.Add(dirObj[i].ToString());
+                        MemberOfGroups.Add(dirObj[i].ToString());
                     }
 
                     break;
@@ -229,6 +229,7 @@ public class ADpUser : ADpBaseObject
     }
 
 
+    
     /// <summary>
     /// Is true, when this object was created from an existing Active Directory object. 
     /// </summary>
@@ -296,7 +297,7 @@ public class ADpUser : ADpBaseObject
     /// All the groups a user is a member of.
     /// <para> Will be null if this attribute was not read form AD</para>
     /// </summary>
-    public HashSet<string>? MemberOf { get; protected set; } = null;
+    //public HashSet<string>? MemberOf { get; protected set; } = null;
 
 
     /// <summary>
@@ -354,6 +355,8 @@ public class ADpUser : ADpBaseObject
 
     #region Attributes
 
+        
+        
     /// <summary>
     /// Full Name of the Department.
     /// </summary>
@@ -711,7 +714,13 @@ public class ADpUser : ADpBaseObject
             AttributesToUpdate[key] = attrValue;
         }
     }
+
     
+    /// <summary>
+    /// The groups this user is a member of.
+    /// </summary>
+    public HashSet<string> MemberOfGroups { get; private set; } = new HashSet<string>();
+
 
     #region "Actions"
 

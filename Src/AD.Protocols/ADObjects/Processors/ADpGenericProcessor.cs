@@ -231,7 +231,7 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
             return Result.Fail(result.Errors);
 
         if (result.Value.Count == 0)
-            return Result.Fail($"No {ObjectEnglishName} found.");
+            return Result.Fail($"No {ObjectEnglishName} found.", EnumReasonCode.NotFound);
 
         if (result.Value.Count > 1)
             return Result.Fail($"Expected to only find one match for the given attribute, but found multiple {ObjectEnglishName}s.");

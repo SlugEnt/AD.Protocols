@@ -1,4 +1,5 @@
-﻿using AD.Protocols.ADObjects;
+﻿using System.Data.Common;
+using AD.Protocols.ADObjects;
 using AD.Protocols.ADObjects.Objects;
 using AD.Protocols.ADObjects.Processors;
 using SlugEnt.AD.Protocols;
@@ -527,23 +528,27 @@ public class Test_Group
         ADpGroup finalGroup = finalGroupResult.Value;
         _groupProcessor.GetMembers(finalGroup);
         Assert.That(finalGroup.Members.Count, Is.EqualTo(1), "[K_110] The group should have 1 member after removal.");
-        Assert.That(finalGroup.Members.Contains(userDistinguishedNames[0]), Is.True, "[K_120] The remaining member is incorrect.");
-
-        // L --> Cleanup
-        /*
-        Result userDeleteResult1 = asi.ADConnector.UserProcessor().Delete(userDistinguishedNames[0]);
-        Assert.That(userDeleteResult1.IsSuccess, Is.True, $"[L_100] Failed to delete user {userDistinguishedNames[0]} from Active Directory.");
-
-        Result userDeleteResult2 = asi.ADConnector.UserProcessor().Delete(userDistinguishedNames[1]);
-        Assert.That(userDeleteResult2.IsSuccess, Is.True, $"[L_110] Failed to delete user {userDistinguishedNames[1]} from Active Directory.");
-
-        Result groupDeleteResult = _groupProcessor.Delete(groupA);
-        Assert.That(groupDeleteResult.IsSuccess, Is.True, "[L_120] Failed to delete group from AD.");
-
-        Result deleteOuResult = asi.ADConnector.OrgUnitProcessor().Delete(newOu);
-        Assert.That(deleteOuResult.IsSuccess, Is.True, "[L_130] Failed to delete OU from AD.");
-        */
+        
+        bool c = ADpUser.EqualSameObject(finalGroup.Members[0], userDistinguishedNames[0]);
+        Assert.That(c, Is.True, "[K_120] The remaining member is incorrect.");
     }
 
+    
+    /// <summary>
+    /// Confirm that when adding new members, we check to see if they are in the remove list as well.  If they are they cancel each other out.
+    /// </summary>
+    [Test]
+    public void AddRemoveMembers_CheckOtherList_Success()
+    {
+        // A --> Setup
+        ADpGroup group = new ADpGroup("test", asi.UnitTestRoot);
+        group.AddUserToGroup("cn=abc");
+        Assert.That(group.NewMembers.Count, Is.EqualTo(1), "[A_100] The group should have 1 new member.");
+        
+        // B --> Act
+        group.RemoveUserFromGroup("cn=abc");
+        Assert.That(group.NewMembers.Count, Is.EqualTo(0), "[B_100] The group should have 0 new members after removal.");
+        Assert.That(group.RemovedMembers.Count, Is.EqualTo(0), "[B_110] The group should have 1 removed member.");
+    }
 }
 

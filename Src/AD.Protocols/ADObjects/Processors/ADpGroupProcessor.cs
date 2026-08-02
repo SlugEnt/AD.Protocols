@@ -152,30 +152,43 @@ public class ADpGroupProcessor : ADpGenericProcessor<ADpGroup>
         {
             try
             {
-                DirectoryAttributeModification memberModification = new DirectoryAttributeModification
-                {
-                    Name      = "member",
-                    Operation = DirectoryAttributeOperation.Add
-                };
-
-                foreach (string member in obj.NewMembers)
-                {
-                    memberModification.Add(member);
-                }
-                
-                foreach (string member in obj.RemovedMembers)
-                {
-                    memberModification.emove(member);
-                }
-                
-
-                // Add member to group
                 var request = new ModifyRequest(obj.DistinguishedName);
 
-                request.Modifications.Add(memberModification);
+                // Process Adds
+                if (obj.NewMembers.Count > 0)
+                {
+                    DirectoryAttributeModification memberModification = new DirectoryAttributeModification
+                    {
+                        Name      = "member",
+                        Operation = DirectoryAttributeOperation.Add
+                    };
 
-                ModifyResponse responmse = (ModifyResponse)_ldapConnection.SendRequest(request);
-                if (responmse.ResultCode == ResultCode.Success)
+                    foreach (string member in obj.NewMembers)
+                    {
+                        memberModification.Add(member);
+                    }
+
+                    request.Modifications.Add(memberModification);
+                }
+
+                if (obj.RemovedMembers.Count > 0)
+                {
+                    DirectoryAttributeModification memberModification = new DirectoryAttributeModification
+                    {
+                        Name      = "member",
+                        Operation = DirectoryAttributeOperation.Delete
+                    };
+
+                    foreach (string member in obj.RemovedMembers)
+                    {
+                        memberModification.Add(member);
+                    }
+                    request.Modifications.Add(memberModification);
+                }
+
+
+                ModifyResponse response = (ModifyResponse)_ldapConnection.SendRequest(request);
+                if (response.ResultCode == ResultCode.Success)
                 {
                     obj.Members.AddRange(obj.NewMembers);
                     foreach (string member in obj.RemovedMembers)
@@ -188,7 +201,7 @@ public class ADpGroupProcessor : ADpGenericProcessor<ADpGroup>
                 }
 
                 // Failure.  
-                return Result.Fail(responmse.ErrorMessage);
+                return Result.Fail(response.ErrorMessage);
             }
             catch (Exception ex)
             {

@@ -265,11 +265,12 @@ public class ADpGroup : ADpBaseObject
             throw new ArgumentNullException(nameof(userDistinguishedName));
         if (!userDistinguishedName.StartsWith("CN=",StringComparison.CurrentCultureIgnoreCase))
             throw new ArgumentException("The distinguished name must start with 'CN='.", nameof(userDistinguishedName));
-        NewMembers.Add(userDistinguishedName);
 
-        // If for some reason we have previously added this user to the RemovedMembers list, remove them from that list.
+        // If for some reason we have previously added this user to the RemovedMembers list, remove them from that list AND DO NOT ADD as NewMember
         if (RemovedMembers.Contains(userDistinguishedName))
             RemovedMembers.Remove(userDistinguishedName);
+        else
+            NewMembers.Add(userDistinguishedName);
     }
     
 
@@ -287,11 +288,11 @@ public class ADpGroup : ADpBaseObject
         if (!userDistinguishedName.StartsWith("CN=", StringComparison.CurrentCultureIgnoreCase))
             throw new ArgumentException("The distinguished name must start with 'CN='.", nameof(userDistinguishedName));
 
-        RemovedMembers.Add(userDistinguishedName);
-        
         // If for some reason we have previously added this user to the NewMembers list, remove them from that list.
         if (NewMembers.Contains(userDistinguishedName))
             NewMembers.Remove(userDistinguishedName);
+        else
+            RemovedMembers.Add(userDistinguishedName);
     }
 }
 
