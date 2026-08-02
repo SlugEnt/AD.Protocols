@@ -656,6 +656,12 @@ public class Test_User
     }
 
 
+    /// <summary>
+    /// Performs a Full test of memberOf functionality.
+    /// 1 - Can Retrieve current members.
+    /// 2 - Can remove user from group and verify memberOf is updated.
+    /// 3 - Can add user to group and verify memberOf is updated.
+    /// </summary>
     [Test]
     public void MemberOf()
     {
@@ -678,9 +684,11 @@ public class Test_User
 
         
         // C --> Act - Save Groups
+        List<ADpGroup> groups = new List<ADpGroup>();
         foreach (TestGroupAttr testGroup in testGroups)
         {
             ADpGroup  group = testGroup.CreateADpGroup(newOu.Path);
+            groups.Add(group);
             group.AddUserToGroup(userA.DistinguishedName);
             Result x = groupProcessor.AddNew(group);
             Assert.That(x.IsSuccess,Is.True,"[C_100] Failed to add group.");
@@ -691,6 +699,37 @@ public class Test_User
         Assert.That(getResult.IsSuccess,Is.True,"[D_100] Failed to get member ofs for user.");
         Assert.That(userA.MemberOfGroups.Count, Is.EqualTo(testGroups.Count), "[D_110] User is not a member of the expected number of groups.");
 
+        // E --> Remove the user from a group and verify the change is reflected in the MemberOf list.
+        ADpUser userB = userProcessor.Get(userA.DistinguishedName).Value;
+        userB.RemoveUserFromGroup(groups[0].DistinguishedName);
+        
+        // Retrieve the group and ensure it has 1 member before removal
+        ADpGroup groupB = groupProcessor.Get(groups[0].DistinguishedName).Value;
+        groupProcessor.GetMembers(groupB);
+        Assert.That(groupB.Members.Count, Is.EqualTo(1), "[D_120] Group does not have exactly 1 member before removal.");
+
+        // F --> Act - Update the user to reflect the removal from the group.
+        Result updateResult = userProcessor.Update(userB);
+        Assert.That(updateResult.IsSuccess, Is.True, "[F_100] Failed to update user after removing from group.");
+
+        // G --> Act - Retrieve the Member of for the user again.
+        ADpGroup groupC = groupProcessor.Get(groups[0].DistinguishedName).Value;
+        groupProcessor.GetMembers(groupC);
+        Assert.That(groupC.Members.Count, Is.EqualTo(0), "[D_120] Group still has members after removing the user   .");
+
+        // H --> Act - add user to group.
+        ADpUser userD = userProcessor.Get(userA.DistinguishedName).Value;
+        userD.AddUserToGroup(groupC.DistinguishedName);
+        Result addResult     = userProcessor.Update(userD);
+        Assert.That(addResult.IsSuccess, Is.True, "[H_100] Failed to add user to group.");
+
+        // J --> Act - Retrieve the group and ensure it has 1 member again.
+        ADpGroup groupD = groupProcessor.Get(groupC.DistinguishedName).Value;
+        groupProcessor.GetMembers(groupD);
+        Assert.That(groupD.Members.Count, Is.EqualTo(1), "[J_100] Group does not have exactly 1 member after adding user back.");
+
+        // K --> Verify the user is now a member of the group again.
+        Assert.That( ADpBaseObject.EqualSameObject(groupD.Members[0],userA.DistinguishedName), Is.True, "[K_100] User is not a member of the group after being added back.");
     }
 }
 

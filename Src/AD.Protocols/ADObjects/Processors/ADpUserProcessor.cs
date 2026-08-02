@@ -1,4 +1,5 @@
-﻿using AD.Protocols.ADObjects.Objects;
+﻿using System.Diagnostics.Contracts;
+using AD.Protocols.ADObjects.Objects;
 using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
 using System.DirectoryServices.Protocols;
@@ -90,32 +91,140 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     {
         // Password changes cannot be done in the same operation as other changes.
         // If the password has been set, then we need to do a separate operation to set it.
+        Result x;
+        Result y;
+        Result final = new();
         if (obj.PasswordHasBeenSet)
         {
-            DirectoryAttributeModification passwordMod = new DirectoryAttributeModification
-            {
-                Name      = "unicodePwd",
-                Operation = DirectoryAttributeOperation.Replace
-            };
-            passwordMod.Add(obj.GetPasswordBytes);
+            x = AfterSave_PasswordUpdate(obj);
+            if (x.IsFailed)
+                final.AddError(new Error("Failure in AfterSave_PasswordUpdate").CausedBy(x.Errors));
+        }
 
-            // 4. Formulate and send the ModifyRequest
-            ModifyRequest request = new ModifyRequest(obj.DistinguishedName, passwordMod);
-            
-            ModifyResponse response = (ModifyResponse)_ldapConnection.SendRequest(request);
+        if (obj.NewGroups.Count > 0 || obj.RemovedGroups.Count > 0)
+        {
+            y = AfterSave_ChangeGroupMembership(obj);
+            if (y.IsFailed)
+                final.AddError(new Error("Failure in AfterSave_ChangeGroupMembership").CausedBy(y.Errors));
+        }
 
-            if (response.ResultCode == ResultCode.Success)
+        return final;
+    }
+
+
+    /// <summary>
+    /// Changes the user password if it was requested.
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <returns></returns>
+    protected Result AfterSave_PasswordUpdate(ADpUser obj)
+    {
+        DirectoryAttributeModification passwordMod = new DirectoryAttributeModification
+        {
+            Name      = "unicodePwd",
+            Operation = DirectoryAttributeOperation.Replace
+        };
+        passwordMod.Add(obj.GetPasswordBytes);
+
+        // Formulate and send the ModifyRequest
+        ModifyRequest request = new ModifyRequest(obj.DistinguishedName, passwordMod);
+
+        ModifyResponse response = (ModifyResponse)_ldapConnection.SendRequest(request);
+
+        if (response.ResultCode == ResultCode.Success)
+        {
+            obj.PasswordHasBeenSet = false;
+            return Result.Ok();
+        }
+
+        return Result.Fail(response.ErrorMessage);
+
+    }
+
+
+    /// <summary>
+    /// Performs changes to Group Memberships for the user.  This is done after the user has been saved to AD, and is done in a
+    /// separate operation because group membership changes cannot be done in the same operation as other changes.
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <returns></returns>
+    protected Result AfterSave_ChangeGroupMembership(ADpUser obj)
+    {
+        try
+        {
+            Result final = new();
+
+            // Process Adds
+            if (obj.NewGroups.Count > 0)
             {
-                obj.PasswordHasBeenSet = false;
+                foreach (string member in obj.NewGroups)
+                {
+                    var request = new ModifyRequest(member);
+                    DirectoryAttributeModification memberModification = new DirectoryAttributeModification
+                    {
+                        Name      = "member",
+                        Operation = DirectoryAttributeOperation.Add
+                    };
+
+                    memberModification.Add(obj.DistinguishedName);
+                    request.Modifications.Add(memberModification);
+                    ModifyResponse r1 = (ModifyResponse)_ldapConnection.SendRequest(request);
+                    if (r1.ResultCode != ResultCode.Success)
+                    {
+                        final.AddError(new Error($"Failure in AfterSave_ChangeGroupMembership - AddGroups:  Group: {member}  User: {obj.DistinguishedName}").CausedBy(r1.ErrorMessage));
+                    }
+                }
+            }
+
+            if (obj.RemovedGroups.Count > 0)
+            {
+                foreach (string member in obj.RemovedGroups)
+                {
+                    var request = new ModifyRequest(member);
+                    DirectoryAttributeModification memberModification = new DirectoryAttributeModification
+                    {
+                        Name      = "member",
+                        Operation = DirectoryAttributeOperation.Delete
+                    };
+
+                    memberModification.Add(obj.DistinguishedName);
+                    request.Modifications.Add(memberModification);
+                    ModifyResponse r1 = (ModifyResponse)_ldapConnection.SendRequest(request);
+                    if (r1.ResultCode != ResultCode.Success)
+                    {
+                        final.AddError(new Error($"Failure in AfterSave_ChangeGroupMembership - RemoveGroups:  Group: {member}  User: {obj.DistinguishedName}").CausedBy(r1.ErrorMessage));
+                    }
+                }
+            }
+
+
+            if (final.IsSuccess)
+            {
+                foreach (string objNewGroup in obj.NewGroups)
+                {
+                    obj.MemberOfGroups.Add(objNewGroup);
+                }
+                foreach (string member in obj.RemovedGroups)
+                {
+                    obj.MemberOfGroups.Remove(member);
+                }
+                obj.RemovedGroups.Clear();
+                obj.NewGroups.Clear();
                 return Result.Ok();
             }
 
-            return Result.Fail(response.ErrorMessage);
+            // Failure.  
+            return Result.Fail(final.Errors);
         }
+        catch (Exception ex)
+        {
+            return Result.Fail(ex.Message);
+        }
+    
 
         return Result.Ok();
-    }
 
+    }
 
     /// <summary>
     /// Returns a list of users located at a particular path in Active Directory.  This is a one-level search, so it will only return users that are direct children of the specified path.

@@ -216,7 +216,7 @@ public class ADpUser : ADpBaseObject
         // TODO  - Do not think this is necessary any longer now that we have the UserAccountControlSetter.HasChangedValue property.  But leaving it here for now.
 
         // See if UserAccountControl has been changed.  If so, we need to add it to the Attributes To Update List
-        if (UserAccountControlSetter.HasChangedValue)
+        if (UserAccountControlSetter != null && UserAccountControlSetter.HasChangedValue)
         {
             string key = ADpCommon.ATN_USER_ACCOUNT_CONTROL;
             AttrUserAccountControl attrValue = new(UserAccountControlSetter.Value, EnumAttributeOperation.Modify);
@@ -739,10 +739,53 @@ public class ADpUser : ADpBaseObject
         }
 
     }
-
-
-
     #endregion
 
+    internal List<string> NewGroups { get; set; } = new List<string>();
+    internal List<string> RemovedGroups { get; set; } = new List<string>();
+
+    
+    /// <summary>
+    /// Adds the specified user to the group.  The user is specified by their distinguished name.  This method adds the user to the NewMembers list, which will be processed when the group is updated.
+    /// <para>Note, you must update / save the group after calling this method for the changes to take effect.</para>
+    /// </summary>
+    /// <param name="groupDistinguishedName"></param>
+    /// <exception cref="ArgumentNullException"></exception>
+    /// <exception cref="ArgumentException"></exception>
+    public void AddUserToGroup(string groupDistinguishedName)
+    {
+        if (string.IsNullOrEmpty(groupDistinguishedName))
+            throw new ArgumentNullException(nameof(groupDistinguishedName));
+        if (!groupDistinguishedName.StartsWith("CN=", StringComparison.CurrentCultureIgnoreCase))
+            throw new ArgumentException("The distinguished name must start with 'CN='.", nameof(groupDistinguishedName));
+
+        // If for some reason we have previously added this user to the RemovedGroups list, remove them from that list AND DO NOT ADD as NewGroup
+        if (RemovedGroups.Contains(groupDistinguishedName))
+            RemovedGroups.Remove(groupDistinguishedName);
+        else
+            NewGroups.Add(groupDistinguishedName);
+    }
+
+
+    /// <summary>
+    /// Removes the specified user from the group.  The user is specified by their distinguished name.  This method adds the user to the RemovedGroups list, which will be processed when the group is updated.
+    /// <para>Note, you must update / save the group after calling this method for the changes to take effect.</para>
+    /// </summary>
+    /// <param name="groupDistinguishedName"></param>
+    /// <exception cref="ArgumentNullException"></exception>
+    /// <exception cref="ArgumentException"></exception>
+    public void RemoveUserFromGroup(string groupDistinguishedName)
+    {
+        if (string.IsNullOrEmpty(groupDistinguishedName))
+            throw new ArgumentNullException(nameof(groupDistinguishedName));
+        if (!groupDistinguishedName.StartsWith("CN=", StringComparison.CurrentCultureIgnoreCase))
+            throw new ArgumentException("The distinguished name must start with 'CN='.", nameof(groupDistinguishedName));
+
+        // If for some reason we have previously added this user to the NewGroups list, remove them from that list.
+        if (NewGroups.Contains(groupDistinguishedName))
+            NewGroups.Remove(groupDistinguishedName);
+        else
+            RemovedGroups.Add(groupDistinguishedName);
+    }
 }
 
