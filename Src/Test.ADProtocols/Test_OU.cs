@@ -250,7 +250,7 @@ public class Test_OU
         Result<ADpOrgUnit> result = ouProcessor.GetBy_Name(ou.Name,parentOu);
         Assert.That(result.IsSuccess, Is.True, "[V_100]");
         Assert.That(result.Value.CommonName, Is.EqualTo(ou.CommonName), "[V_110]");
-
+        Assert.That(result.Value.WasReadFromActiveDirectory, Is.True, "[V_120]  WasReadFromActiveDirectory property should have been set to True");
     }
     /*
 

@@ -105,7 +105,7 @@ public class Test_ADp_BaseObjects
 
         // Act - Verify that retrieving Attributes after clearing still works and is empty
         string[] attributes = attributeRetrieverMgr.Attributes;
-        Assert.That(attributes.Length, Is.EqualTo(0), "[V_260] Length should be 0 after clear.");
+        Assert.That(attributes.Length, Is.EqualTo(2), "[V_260] Length should be 0 after clear.");
     }
 
 

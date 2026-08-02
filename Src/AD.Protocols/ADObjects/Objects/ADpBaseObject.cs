@@ -55,6 +55,10 @@ public abstract class ADpBaseObject
     /// </summary>
     internal bool InCreationMode { get; set; }
 
+    /// <summary>
+    /// True, if this object was created from an Active Directory read operation.  If false, then this object was created in code and has not yet been saved to Active Directory.
+    /// </summary>
+    public bool WasReadFromActiveDirectory { get; set; } = false;
 
     /// <summary>
     /// The parent AD path of this object.  This is the path to the parent OU in Active Directory.
@@ -85,7 +89,6 @@ public abstract class ADpBaseObject
         get { return AttributesToUpdate; }
     }
 
-    
     
     /// <summary>
     /// Builds the prefix for the distinguished name of the object.  Some objects use a prefix other than cn.

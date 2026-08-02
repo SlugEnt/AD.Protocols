@@ -29,7 +29,9 @@ public class ADpUser : ADpBaseObject
             UserAccountControlSetter = new UserAccountControl(UserAccountControlHasChanged);
             ParentPath               = parentPath;
             Name                     = name;
-
+            
+            // Create the Distinguished Name as we have enough info to do so.
+            BuildDistinguishedName();
             IsNew          = true;
             InCreationMode = false;
         }
@@ -286,7 +288,6 @@ public class ADpUser : ADpBaseObject
         UserAccountControlSetter.DisableAccount();
     }
     #endregion
-
 
     #region Info Attributes
 

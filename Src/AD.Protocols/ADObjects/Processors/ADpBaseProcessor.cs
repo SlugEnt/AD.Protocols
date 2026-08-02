@@ -137,7 +137,8 @@ public abstract class ADpBaseProcessor
     /// </summary>
     /// <param name="dn">The distinguished name of the object to retrieve.</param>
     /// <param name="overrideAttributes">Optional array of attributes to override the default attributes to return.  Only needed in rare cases</param>
-    /// <returns>A Result containing the search result entry collection or an error.</returns>
+    /// <returns>If object Found:  A Result containing the search result entry collection
+    /// <para>>If not Found:  Result.Failed with Reason Code: NotFound</para></returns>
     protected Result<SearchResultEntryCollection> GetSingle (string dn, string[] overrideAttributes = null)
     {
         SearchScope searchScope = SearchScope.Base;
@@ -154,10 +155,10 @@ public abstract class ADpBaseProcessor
             return Result.Fail(result.Errors);
         
         if (result.Value.Count == 0)
-            return Result.Fail(NOT_FOUND);
+            return Result.Fail(NOT_FOUND,EnumReasonCode.NotFound);
         
         if (result.Value[0].Entries.Count == 0)
-            return Result.Fail(NOT_FOUND);
+            return Result.Fail(NOT_FOUND,EnumReasonCode.NotFound);
         
         return Result.Ok(result.Value[0].Entries);
     }
@@ -171,6 +172,7 @@ public abstract class ADpBaseProcessor
     public Result<bool> Exists (string dn)
     {
         string[] overrideAttributes = new string[] { "cn" }; // Only need to retrieve the cn attribute to check existence
+        
         Result<SearchResultEntryCollection> result = GetSingle(dn, overrideAttributes);
         
         if (result.IsSuccess) return Result.Ok(true);
@@ -205,12 +207,12 @@ public abstract class ADpBaseProcessor
 
             if (resultResponse.Value.Count == 0)
             {
-                return Result.Fail(NOT_FOUND);
+                return Result.Fail(NOT_FOUND,EnumReasonCode.NotFound);
             }
 
             if (resultResponse.Value[0].Entries.Count == 0)
             {
-                return Result.Fail(NOT_FOUND);
+                return Result.Fail(NOT_FOUND,EnumReasonCode.NotFound);
             }
 
             return Result.Ok(resultResponse.Value[0].Entries);

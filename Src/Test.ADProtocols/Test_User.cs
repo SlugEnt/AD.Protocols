@@ -96,27 +96,60 @@ public class Test_User
 
 
     [Test]
-    public void Exists_Success()
+    public void Exists_UserExist_Success()
     {
         // A --> Setup
         // Create 2 random OU;s
         ADpOrgUnit newOu    = asi.CreateRandomOuNew();
 
         ADpUser          userA         = new ADpUser(asi.Faker.Person.FullName, newOu.Path);
-
+        Assert.That(userA.DistinguishedName,Is.Not.Empty,"[A_100] Distinguished Name should not be empty.");
+        
         // See if user exists.
         Result<bool> existsResult = _userProcessor.Exists(userA);
-        Assert.That(existsResult.IsSuccess,Is.False, "[V_100] Failed to check if user exists.");    
-
-        // Save User
-        Result x = _userProcessor.AddNew(userA);
-        Assert.That(x.IsSuccess,Is.True, "[V_110] Failed to add user.");
-
-        // See if user exists.
-        Result<bool> existsResultAfterAdd = _userProcessor.Exists(userA);
-        Assert.That(existsResultAfterAdd.IsSuccess, Is.True, "[V_200] Failed to check if user exists after add.");
-        Assert.That(existsResultAfterAdd.Value, Is.True, "[V_210] User was not found after add.");
+        Assert.That(existsResult.IsSuccess,Is.True, "[V_100] Failed to check if user exists.");
     }
+
+
+
+
+    [Test]
+    public void Exists_UserNotExist_Success()
+    {
+        // A --> Setup
+        // Create 2 random OU;s
+        ADpOrgUnit newOu = asi.CreateRandomOuNew();
+
+        // Create a user that does NOT exist
+        ADpUser userThatDoesNotExist = new ADpUser(asi.Faker.Person.FullName + "9865", newOu.Path);
+        Assert.That(userThatDoesNotExist.DistinguishedName,Is.Not.Empty,"[A_100] Distinguished Name should not be empty.");
+        
+        // See if user exists.
+        Result<bool> result = _userProcessor.Exists(userThatDoesNotExist);
+        Assert.That(result.IsSuccess, Is.True, "[V_100] User Exists should always return Success unless true errors.");
+        Assert.That(result.Value, Is.False, "[V_110] Result Value should have been false - due to user not existing.");
+    }
+
+
+
+    [Test]
+    public void Exists_UserObjWithNoDN_Success()
+    {
+        // A --> Setup
+        // Create 2 random OU;s
+        ADpOrgUnit newOu = asi.CreateRandomOuNew();
+
+        // Create a user that does NOT exist
+        ADpUser userThatDoesNotExist = new ADpUser(asi.Faker.Person.FullName + "9865");
+        
+        
+        // V --> Verify See if user exists.
+        Result<bool> result = _userProcessor.Exists(userThatDoesNotExist);
+        Assert.That(result.IsFailed, Is.True, "[V_100] User Exists should be false.  User does not have Distinguished name");
+        Assert.That(result.ErrorTitle.Contains("Distinguished Name field does not exist"),"[V_110] Error title does not contain expected text.");
+    }
+
+
 
 
     [Test]

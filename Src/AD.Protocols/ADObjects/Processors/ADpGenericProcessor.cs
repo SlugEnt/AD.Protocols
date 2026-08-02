@@ -59,9 +59,10 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
             
             if (resultResponse.Value.Count == 0)
                 return Result.Fail(NOT_FOUND);
-            
+
             if (resultResponse.Value[0].Entries.Count == 0)
-                return Result.Fail(NOT_FOUND);
+                return new List<T>();
+                //return Result.Fail(NOT_FOUND);
             
             // Now process the returned entries into Objects of the specified type.
             if (findOnlyOne && resultResponse.Value.Count > 1)
@@ -194,7 +195,9 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
     /// <param name="distinguishedName"></param>
     /// <returns></returns>
     public Result<T> Get(string distinguishedName)
-    { 
+    {
+        if (string.IsNullOrEmpty(distinguishedName))
+            return Result.Fail("Distinguished Name was empty.  Object must have a distinguished name to check for its existence.");
         Result<SearchResultEntryCollection> result = GetSingle(distinguishedName);
 
         if (result.IsFailed)
@@ -205,7 +208,8 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
         try
         {
             T x = (T)Activator.CreateInstance(typeof(T), result.Value[0].Attributes);
-
+            x.WasReadFromActiveDirectory = true;
+            
             // Return the object.
             return Result.Ok(x);
         }
@@ -264,6 +268,7 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
             {
                 return Result.Fail(objResult.ToStringErrorOnly());
             }
+            objResult.Value.WasReadFromActiveDirectory = true;
             adObjects.Add(objResult.Value);
         }
         return Result.Ok(adObjects);
@@ -365,7 +370,7 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
     /// <returns></returns>
     public Result<bool> Exists (T obj)
     {
-        if (obj.DistinguishedName == null)
+        if (string.IsNullOrEmpty(obj.DistinguishedName))
             return Result.Fail("Distinguished Name field does not exist - cannot check this object yet.");
         
         return Exists(obj.DistinguishedName);

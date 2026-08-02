@@ -1,5 +1,4 @@
-﻿
-using AD.Protocols.ADObjects.Objects;
+﻿using AD.Protocols.ADObjects.Objects;
 using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
 using System.DirectoryServices.Protocols;
@@ -21,7 +20,8 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     
     protected override Result<ADpUser> CreateObjectFromAttributes(SearchResultAttributeCollection attributes)
     {
-        throw new NotImplementedException();
+        ADpUser user = new(attributes);
+        return Result.Ok(user);
     }
 
 
@@ -95,10 +95,7 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
 
             // 4. Formulate and send the ModifyRequest
             ModifyRequest request = new ModifyRequest(obj.DistinguishedName, passwordMod);
-
-            // (Optional) Add control to bypass password history limits if necessary
-            // request.Controls.Add(new PasswordPolicyControl()); 
-
+            
             ModifyResponse response = (ModifyResponse)_ldapConnection.SendRequest(request);
 
             if (response.ResultCode == ResultCode.Success)
@@ -131,7 +128,7 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
         if (result.ErrorTitle == "NotFound")
             return new List<ADpUser>();
 
-        throw new Exception($"Failed to retrieve child users under {parentDn.Path}. Error: {result.Errors[0].Message}");
+        throw new Exception($"Failed to retrieve child users under {parentDn.Path}. Error: {result.ToStringErrorOnly()}");
 
     }
 }
