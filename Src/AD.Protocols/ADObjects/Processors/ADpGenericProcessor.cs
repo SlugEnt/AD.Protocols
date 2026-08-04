@@ -107,6 +107,21 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
     public Result Delete(T obj) { return Delete(obj.DistinguishedName); }
 
     
+    /// <summary>
+    /// Some objects need information from the Processor before they can be successfully saved....
+    /// </summary>
+    /// <param name="obj">Object being saved</param>
+    /// <returns></returns>
+    protected virtual Result ProcessorPreSave(T obj)
+    {
+        if (obj == null)
+            return Result.Fail("The object to be saved cannot be null.");
+
+        // Perform any necessary pre-save operations or validations here.
+        // Example: Validate required properties or set default values.
+
+        return Result.Ok();
+    }
     
     
     
@@ -119,13 +134,18 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
     {
         try
         {
-            string dn;
+            Result preSaveResult = ProcessorPreSave(obj);
+            if (preSaveResult.IsFailed)
+                return preSaveResult;
+            
+            
+            // Perform any final Pre-Save processing on the object before saving to AD.
+            obj.SyncPreSave();
+            
             if (obj.IsNew)
                 if (obj.DistinguishedName == null || obj.DistinguishedName == string.Empty)
                     obj.BuildDistinguishedName();
 
-            // Perform any final Pre-Save processing on the object before saving to AD.
-            obj.SyncPreSave();
 
             // Retrieve the Directory Attributes to save to AD.
             DirectoryAttribute[] attributesToLoad = obj.GetDirectoryAttributesNew();
@@ -410,13 +430,106 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
         obj.RenameObject(result.Value, newCommonName);
         return Result.Ok();
     }
-    
-    
+
+
+    /// <summary>
+    /// Provides a method to retieve all members of an Active Directory Attribute that may contain more than the maximum 1500 AD members that can be returned in a single query.
+    /// This method will retrieve all members of the attribute and return them in the passed in HashSet.  Note any members in the current Hashset are cleared.
+    /// </summary>
+    /// <param name="objectDistinguishedName">The Full Distinguished Name of the object to retrieve the attribute from.</param>
+    /// <param name="attributeName">Name of the attribute to retrieve.</param>
+    /// <param name="members">A HashSet to store the retrieved members.</param>
+    /// <param name="stepCount">The number of members to retrieve per request.</param>
+    /// <returns></returns>
+    protected Result<HashSet<string>> AD_RangeRetrieval(string objectDistinguishedName, string attributeName, int stepCount = 500)
+    {
+        int startRange = 0;
+        bool hasMoreMembers = true;
+
+        HashSet<string> retrievedMembers = new HashSet<string>();
+
+        while (hasMoreMembers)
+        {
+            int endRange = startRange + stepCount - 1;
+
+            // Format the range attribute query (e.g., "member;range=0-1499")
+            string memberAttributeWithRange = $"{attributeName};range={startRange}-{endRange}";
+
+            var request = new SearchRequest(
+                                            objectDistinguishedName,
+                                            "(objectClass=*)",
+                                            SearchScope.Base, // Base scope targets only this specific group object
+                                            new string[]
+                                            {
+                                                memberAttributeWithRange
+                                            }
+                                           );
+
+            var response = (SearchResponse)_ldapConnection.SendRequest(request);
+
+            // If nothing found, exit the while loop.
+            if (response.Entries.Count == 0)
+                break;
+
+            SearchResultEntry groupEntry = response.Entries[0];
+            bool rangeFoundInThisLoop = false;
+
+
+            foreach (string attrName in groupEntry.Attributes.AttributeNames)
+            {
+                // Active Directory will return either "member;range=X-Y" or "member;range=X-*"
+                if (attrName.StartsWith($"{attributeName};range=", StringComparison.OrdinalIgnoreCase))
+                {
+                    rangeFoundInThisLoop = true;
+                    DirectoryAttribute attribute = groupEntry.Attributes[attrName];
+
+                    // Extract Distinguished Names of the members
+                    foreach (object val in attribute.GetValues(typeof(string)))
+                    {
+                        retrievedMembers.Add(val.ToString());
+                    }
+
+                    // If the attribute name ends with "-*", we have reached the final block
+                    if (attrName.EndsWith("-*"))
+                    {
+                        hasMoreMembers = false;
+                    }
+                    else
+                    {
+                        startRange += stepCount;
+                    }
+
+                    break;
+                }
+            }
+
+            // Fallback: If the group has < 1500 members, AD ignores ranges and returns a normal "member" attribute
+            if (!rangeFoundInThisLoop)
+            {
+                if (groupEntry.Attributes.Contains(attributeName))
+                {
+                    DirectoryAttribute attribute = groupEntry.Attributes[attributeName];
+                    foreach (object val in attribute.GetValues(typeof(string)))
+                    {
+                        retrievedMembers.Add(val.ToString());
+                    }
+                }
+
+                hasMoreMembers = false;
+            }
+        }
+
+        return Result.Ok(retrievedMembers);
+    }
+
+
+
     /// <summary>
     /// Derived classes should override this if they need to do anything after saving an object to AD.
     /// </summary>
     /// <param name="obj"></param>
     /// <returns></returns>
     protected virtual Result AfterSave (T obj) { return Result.Ok(); }
+    
 }
 

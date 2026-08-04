@@ -59,84 +59,24 @@ public class ADpGroupProcessor : ADpGenericProcessor<ADpGroup>
     /// <returns></returns>
     public Result GetMembers(ADpGroup group)
     {
-        int  step           = MembersRetrievedPerRequest;
-        int  startRange     = 0;
-        bool hasMoreMembers = true;
+        return group.Members.GetMembersFromActiveDirectory(group.DistinguishedName,_ldapConnection);
+        /*
+        Result<HashSet<string>> result =  AD_RangeRetrieval(group.DistinguishedName, "member", MembersRetrievedPerRequest);
+        if (result.IsFailed)
+            return Result.Fail(result.Errors);
 
-        group.Members.Clear();
+        group.Members = result.Value;
         
-        while (hasMoreMembers)
-        {
-            int endRange = startRange + step - 1;
-
-            // Format the range attribute query (e.g., "member;range=0-1499")
-            string memberAttributeWithRange = $"member;range={startRange}-{endRange}";
-
-            var request = new SearchRequest(
-                                            group.DistinguishedName,
-                                            "(objectClass=*)",
-                                            SearchScope.Base, // Base scope targets only this specific group object
-                                            new string[]
-                                            {
-                                                memberAttributeWithRange
-                                            }
-                                           );
-
-            var response = (SearchResponse)_ldapConnection.SendRequest(request);
-
-            if (response.Entries.Count == 0)
-                break;
-
-            SearchResultEntry groupEntry           = response.Entries[0];
-            bool              rangeFoundInThisLoop = false;
-            
-
-            foreach (string attrName in groupEntry.Attributes.AttributeNames)
-            {
-                // Active Directory will return either "member;range=X-Y" or "member;range=X-*"
-                if (attrName.StartsWith("member;range=", StringComparison.OrdinalIgnoreCase))
-                {
-                    rangeFoundInThisLoop = true;
-                    DirectoryAttribute attribute = groupEntry.Attributes[attrName];
-
-                    // Extract Distinguished Names of the members
-                    foreach (object val in attribute.GetValues(typeof(string)))
-                    {
-                        group.Members.Add(val.ToString());
-                    }
-
-                    // If the attribute name ends with "-*", we have reached the final block
-                    if (attrName.EndsWith("-*"))
-                    {
-                        hasMoreMembers = false;
-                    }
-                    else
-                    {
-                        startRange += step;
-                    }
-
-                    break;
-                }
-            }
-
-            // Fallback: If the group has < 1500 members, AD ignores ranges and returns a normal "member" attribute
-            if (!rangeFoundInThisLoop)
-            {
-                if (groupEntry.Attributes.Contains("member"))
-                {
-                    DirectoryAttribute attribute = groupEntry.Attributes["member"];
-                    foreach (object val in attribute.GetValues(typeof(string)))
-                    {
-                        group.Members.Add(val.ToString());
-                    }
-                }
-
-                hasMoreMembers = false;
-            }
-        }
-
         return Result.Ok();
+        */
+        
     }
+
+
+    /// <summary>
+    /// How many groups are retrieved per request.  Active Directory has a limit of 1500 members per request, so this value should be set to 1500 or less.  The default is 1400.
+    /// </summary>
+    internal int GroupsRetrievedPerRequest { get; set; } = 1400;
 
 
     /// <summary>
@@ -147,6 +87,9 @@ public class ADpGroupProcessor : ADpGenericProcessor<ADpGroup>
     /// <returns></returns>
     protected override Result AfterSave(ADpGroup obj)
     {
+        return obj.Members.SaveChangesToActiveDirectory(_ldapConnection,obj.DistinguishedName);
+        
+        /*
         // If the object has members that were added or removed, process them here.
         if (obj.NewMembers.Count > 0 || obj.RemovedMembers.Count > 0)
         {
@@ -190,7 +133,10 @@ public class ADpGroupProcessor : ADpGenericProcessor<ADpGroup>
                 ModifyResponse response = (ModifyResponse)_ldapConnection.SendRequest(request);
                 if (response.ResultCode == ResultCode.Success)
                 {
-                    obj.Members.AddRange(obj.NewMembers);
+                    foreach (string member in obj.NewMembers)
+                    {
+                        obj.Members.Add(member);
+                    }
                     foreach (string member in obj.RemovedMembers)
                     {
                         obj.Members.Remove(member);
@@ -210,7 +156,7 @@ public class ADpGroupProcessor : ADpGenericProcessor<ADpGroup>
         }
 
         return Result.Ok();
-
+        */
     }
 
     /// <summary>

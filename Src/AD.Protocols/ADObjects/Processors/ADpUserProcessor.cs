@@ -333,6 +333,14 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     /// <returns></returns>
     public Result GetMemberOfs(ADpUser user)
     {
+        Result<HashSet<string>> result = AD_RangeRetrieval(user.DistinguishedName, "memberOf", GroupsRetrievedPerRequest);
+        if (result.IsFailed)
+            return Result.Fail(result.Errors);
+
+        user.MemberOfGroups = result.Value;
+        return Result.Ok();
+
+        /*
         int step = GroupsRetrievedPerRequest;
         int startRange = 0;
         bool hasMoreMembers = true;
@@ -410,6 +418,8 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
         }
 
         return Result.Ok();
+        */
     }
+
 }
 

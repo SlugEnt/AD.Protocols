@@ -1,4 +1,5 @@
 ﻿using System.DirectoryServices.Protocols;
+using AD.Protocols.ADObjects.Fields;
 using SlugEnt.AD.Protocols;
 using SlugEnt.AD.Protocols.Attributes;
 using SlugEnt.FluentResults;
@@ -110,6 +111,7 @@ public class ADpGroup : ADpBaseObject
                     break;
                 
                 // This will be hit if the group has < 1500 members.  
+                /*
                 case "member":
                     for (int i = 0; i < dirObj.Count; i++)
                     {
@@ -117,8 +119,10 @@ public class ADpGroup : ADpBaseObject
                     }
 
                     break;
+                */
                 default:
                     // See if it is an edge case where the group has > 1500 members.  In this case, the member attribute will not be returned, but the member;range=0-1499 attribute will be returned instead.
+                    /*
                     if (dirObj.Name.StartsWith("member;range="))
                     {
                         for (int i = 0; i < dirObj.Count; i++)
@@ -126,7 +130,7 @@ public class ADpGroup : ADpBaseObject
                             Members.Add(dirObj[i].ToString()!);
                         }
                     }
-
+                    */
                     break;
             }
         }
@@ -150,23 +154,27 @@ public class ADpGroup : ADpBaseObject
 
     #region "Attributes"
 
+
+    public MultiValuedDNAttribute Members { get; internal set; } = new MultiValuedDNAttribute("member");
+    
+    
     // TODO:  Add the ability to add/remove members from a group.  This will require a new attribute type that can handle adding/removing members from a group.
     /// <summary>
     /// Members of the group
     /// </summary>
-    public List<string> Members { get; private set; } = new List<string>();
+    //public HashSet<string> Members { get; internal set; } = new HashSet<string>();
 
     
     /// <summary>
     /// Members to be added to the group.  This is used when updating a group to add new members.  This list will be processed when the group is updated.
     /// </summary>
-    internal List<string> NewMembers { get; set; } = new List<string>();
+    //internal HashSet<string> NewMembers { get; set; } = new HashSet<string>();
 
     
     /// <summary>
     /// Members to be removed from the group.  This is used when updating a group to remove members.  This list will be processed when the group is updated.
     /// </summary>
-    internal List<string> RemovedMembers { get; set; } = new List<string>();
+    //internal HashSet<string> RemovedMembers { get; set; } = new HashSet<string>();
 
     /// <summary>
     /// The type of AD Group this is.  This is a required attribute for creating a new group.  If this is not set, then the group cannot be created.
@@ -267,12 +275,15 @@ public class ADpGroup : ADpBaseObject
             throw new ArgumentException("The distinguished name must start with 'CN='.", nameof(userDistinguishedName));
 
         // If for some reason we have previously added this user to the RemovedMembers list, remove them from that list AND DO NOT ADD as NewMember
+        if (Members.AddMember(userDistinguishedName)) { return; }
+        /*
         if (RemovedMembers.Contains(userDistinguishedName))
             RemovedMembers.Remove(userDistinguishedName);
         else
             NewMembers.Add(userDistinguishedName);
+        */
     }
-    
+
 
     /// <summary>
     /// Removes the specified user from the group.  The user is specified by their distinguished name.  This method adds the user to the RemovedMembers list, which will be processed when the group is updated.
@@ -288,11 +299,15 @@ public class ADpGroup : ADpBaseObject
         if (!userDistinguishedName.StartsWith("CN=", StringComparison.CurrentCultureIgnoreCase))
             throw new ArgumentException("The distinguished name must start with 'CN='.", nameof(userDistinguishedName));
 
+        Members.RemoveMember(userDistinguishedName, false);
+
         // If for some reason we have previously added this user to the NewMembers list, remove them from that list.
-        if (NewMembers.Contains(userDistinguishedName))
+/*        if (NewMembers.Contains(userDistinguishedName))
             NewMembers.Remove(userDistinguishedName);
         else
             RemovedMembers.Add(userDistinguishedName);
+    }
+*/
     }
 }
 

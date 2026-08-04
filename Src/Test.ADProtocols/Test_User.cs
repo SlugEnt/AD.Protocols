@@ -28,9 +28,9 @@ public class Test_User
     #endregion
 
 
-        /// <summary>
-        /// Simple Create, Add, Get, Delete user Test.  Creates a user with just a name and saves it to AD.
-        /// </summary>
+    /// <summary>
+    /// Simple Create, Add, Get, Delete user Test.  Creates a user with just a name and saves it to AD.
+    /// </summary>
     [Test]
     public void CycleUser_CRUD_Success()
     {
@@ -706,7 +706,7 @@ public class Test_User
         // Retrieve the group and ensure it has 1 member before removal
         ADpGroup groupB = groupProcessor.Get(groups[0].DistinguishedName).Value;
         groupProcessor.GetMembers(groupB);
-        Assert.That(groupB.Members.Count, Is.EqualTo(1), "[D_120] Group does not have exactly 1 member before removal.");
+        Assert.That(groupB.Members.CurrentValues.Count, Is.EqualTo(1), "[D_120] Group does not have exactly 1 member before removal.");
 
         // F --> Act - Update the user to reflect the removal from the group.
         Result updateResult = userProcessor.Update(userB);
@@ -715,7 +715,7 @@ public class Test_User
         // G --> Act - Retrieve the Member of for the user again.
         ADpGroup groupC = groupProcessor.Get(groups[0].DistinguishedName).Value;
         groupProcessor.GetMembers(groupC);
-        Assert.That(groupC.Members.Count, Is.EqualTo(0), "[D_120] Group still has members after removing the user   .");
+        Assert.That(groupC.Members.CurrentValues.Count, Is.EqualTo(0), "[D_120] Group still has members after removing the user   .");
 
         // H --> Act - add user to group.
         ADpUser userD = userProcessor.Get(userA.DistinguishedName).Value;
@@ -726,10 +726,10 @@ public class Test_User
         // J --> Act - Retrieve the group and ensure it has 1 member again.
         ADpGroup groupD = groupProcessor.Get(groupC.DistinguishedName).Value;
         groupProcessor.GetMembers(groupD);
-        Assert.That(groupD.Members.Count, Is.EqualTo(1), "[J_100] Group does not have exactly 1 member after adding user back.");
+        Assert.That(groupD.Members.CurrentValues.Count, Is.EqualTo(1), "[J_100] Group does not have exactly 1 member after adding user back.");
 
         // K --> Verify the user is now a member of the group again.
-        Assert.That( ADpBaseObject.EqualSameObject(groupD.Members[0],userA.DistinguishedName), Is.True, "[K_100] User is not a member of the group after being added back.");
+        Assert.That( ADpBaseObject.EqualSameObject(groupD.Members.CurrentValues.First(),userA.DistinguishedName), Is.True, "[K_100] User is not a member of the group after being added back.");
     }
 }
 

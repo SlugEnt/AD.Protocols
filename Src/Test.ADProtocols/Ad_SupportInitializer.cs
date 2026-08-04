@@ -176,7 +176,7 @@ public class Ad_SupportInitializer
 
                 if (result.IsFailed)
                 {
-                    if (result.Errors[0].Message == ActiveDirectoryConnector.EXISTS)
+                    if (result.Errors[0].Message.Contains("The object exists"))
                     {
                         // Try again...
                         continue;

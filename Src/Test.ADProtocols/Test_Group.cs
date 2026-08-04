@@ -248,20 +248,21 @@ public class Test_Group
         // E. Retrieve members and verify they match what was added.
         Result getMembersResult = _groupProcessor.GetMembers(foundGroup);
         Assert.That(getMembersResult.IsSuccess, Is.True, "[E_100] Failed to retrieve group members from AD.");
-        foreach (string foundGroupMember in foundGroup.Members)
-        {
-            bool found = false;
-            foreach (string userDistinguishedName in userDistinguishedNames)
-            {
-                if (ADpBaseObject.EqualSameObject(foundGroupMember, userDistinguishedName))
-                {
-                    found = true;
-                    break;
-                }
-            }
-            Assert.That(found,Is.True,"Unable to find the user in the download Active Directory object's member list.");
-        }
 
+                foreach (string foundGroupMember in foundGroup.Members.CurrentValues)
+                {
+                    bool found = false;
+                    foreach (string userDistinguishedName in userDistinguishedNames)
+                    {
+                        if (ADpBaseObject.EqualSameObject(foundGroupMember, userDistinguishedName))
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+                    Assert.That(found,Is.True,"Unable to find the user in the download Active Directory object's member list.");
+                }
+        
         // Z -- Delete the group
         Result z = _groupProcessor.Delete(foundGroup);
         Assert.That(z.IsSuccess, Is.True, "[Z_100] Failed to delete group    from AD.");
@@ -416,7 +417,7 @@ public class Test_Group
         Result getMembersResult = _groupProcessor.GetMembers(foundGroup);
         Assert.That(getMembersResult.IsSuccess, Is.True, "[E_100] Failed to retrieve group members from AD.");
         int count = 0;
-        foreach (string foundGroupMember in foundGroup.Members)
+        foreach (string foundGroupMember in foundGroup.Members.CurrentValues)
         {
             bool found = false;
             foreach (string userDistinguishedName in userDistinguishedNames)
@@ -497,7 +498,7 @@ public class Test_Group
         _groupProcessor.GetMembers(adGroup);
 
         // E  --> Act 3 - Add a new member to the group
-        Assert.That(adGroup.Members.Count, Is.EqualTo(0),"[E_100] The group should have no members initially.");
+        Assert.That(adGroup.Members.CurrentValues.Count, Is.EqualTo(0),"[E_100] The group should have no members initially.");
 
         // F  --> Act 4 - Add a new member to the group
         adGroup.AddUserToGroup(userDistinguishedNames[0]);
@@ -512,7 +513,7 @@ public class Test_Group
         Assert.That(updatedGroupResult.IsSuccess, Is.True, "[H_100] Failed to retrieve updated group from AD.");
         ADpGroup updatedGroup = updatedGroupResult.Value;
         _groupProcessor.GetMembers(updatedGroup);
-        Assert.That(updatedGroup.Members.Count, Is.EqualTo(2), "[H_110] The group should have 2 members after the update.");
+        Assert.That(updatedGroup.Members.CurrentValues.Count, Is.EqualTo(2), "[H_110] The group should have 2 members after the update.");
 
 
         // I  --> Act 6 - Remove a member from the group
@@ -527,9 +528,9 @@ public class Test_Group
         Assert.That(finalGroupResult.IsSuccess, Is.True, "[K_100] Failed to retrieve final group from AD.");
         ADpGroup finalGroup = finalGroupResult.Value;
         _groupProcessor.GetMembers(finalGroup);
-        Assert.That(finalGroup.Members.Count, Is.EqualTo(1), "[K_110] The group should have 1 member after removal.");
+        Assert.That(finalGroup.Members.CurrentValues.Count, Is.EqualTo(1), "[K_110] The group should have 1 member after removal.");
         
-        bool c = ADpUser.EqualSameObject(finalGroup.Members[0], userDistinguishedNames[0]);
+        bool c = ADpUser.EqualSameObject(finalGroup.Members.CurrentValues.First(), userDistinguishedNames[0]);
         Assert.That(c, Is.True, "[K_120] The remaining member is incorrect.");
     }
 
@@ -543,12 +544,12 @@ public class Test_Group
         // A --> Setup
         ADpGroup group = new ADpGroup("test", asi.UnitTestRoot);
         group.AddUserToGroup("cn=abc");
-        Assert.That(group.NewMembers.Count, Is.EqualTo(1), "[A_100] The group should have 1 new member.");
+        Assert.That(group.Members.Additions.Count, Is.EqualTo(1), "[A_100] The group should have 1 new member.");
         
         // B --> Act
         group.RemoveUserFromGroup("cn=abc");
-        Assert.That(group.NewMembers.Count, Is.EqualTo(0), "[B_100] The group should have 0 new members after removal.");
-        Assert.That(group.RemovedMembers.Count, Is.EqualTo(0), "[B_110] The group should have 1 removed member.");
+        Assert.That(group.Members.Additions.Count, Is.EqualTo(0), "[B_100] The group should have 0 new members after removal.");
+        Assert.That(group.Members.Removals.Count, Is.EqualTo(0), "[B_110] The group should have 1 removed member.");
     }
 }
 

@@ -339,7 +339,10 @@ public class ADSPath
     ///         Jersey,ou=office,dc=some,dc=local
     ///     </para>
     /// </summary>
-    /// <param name="childPart">The child container of the current object.  In format:  OU=child or OU=grandchild,OU=child</param>
+    /// <param name="childPart">The child container of the current object.  In format:  OU=child or OU=grandchild,OU=child.
+    /// <para>>It can also be in CN=child,CN=parent format, but the IsOuPath must be false.</para>
+    /// </param>
+    /// <param name="isOuPath">Indicates whether the path is an OU path.</param>
     /// <returns></returns>
     public ADSPath NewChildADSPath(string childPart,
                                    bool isOuPath = true)

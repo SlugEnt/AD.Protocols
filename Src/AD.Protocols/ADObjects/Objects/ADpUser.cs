@@ -96,13 +96,14 @@ public class ADpUser : ADpBaseObject
                 case "manager":         Manager            = dirObj[0].ToString(); break;
                 case "telephoneNumber": Phone              = dirObj[0].ToString(); break;
                 case "description":     Description        = dirObj[0].ToString(); break;
-                case "memberOf":
+/*                case "memberOf":
                     for (int i = 0; i < dirObj.Count; i++)
                     {
                         MemberOfGroups.Add(dirObj[i].ToString());
                     }
 
                     break;
+*/
                 case "userAccountControl":
                     if (!int.TryParse(dirObj[0].ToString(), out ival))
                     {
@@ -719,7 +720,7 @@ public class ADpUser : ADpBaseObject
     /// <summary>
     /// The groups this user is a member of.
     /// </summary>
-    public HashSet<string> MemberOfGroups { get; private set; } = new HashSet<string>();
+    public HashSet<string> MemberOfGroups { get; internal set; } = new HashSet<string>();
 
 
     #region "Actions"
@@ -741,8 +742,8 @@ public class ADpUser : ADpBaseObject
     }
     #endregion
 
-    internal List<string> NewGroups { get; set; } = new List<string>();
-    internal List<string> RemovedGroups { get; set; } = new List<string>();
+    internal HashSet<string> NewGroups { get; set; } = new HashSet<string>();
+    internal HashSet<string> RemovedGroups { get; set; } = new HashSet<string>();
 
     
     /// <summary>
