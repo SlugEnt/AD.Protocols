@@ -141,7 +141,8 @@ public class ADpGroup : ADpBaseObject
 
 
         // Calculate ParentPath
-        ParentPath = new ADSPath(DistinguishedName).GetParent();
+        Result<ADSPath> pathResult = new ADSPath(DistinguishedName).GetParent();
+        ParentPath = pathResult.IsSuccess ? pathResult.Value : null;
 
         InCreationMode = false;
     }

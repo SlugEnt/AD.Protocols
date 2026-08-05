@@ -3,6 +3,7 @@ using SlugEnt.AD.Protocols.Attributes;
 using System.DirectoryServices.Protocols;
 using System.Text;
 using AD.Protocols.ADObjects.Fields;
+using SlugEnt.FluentResults;
 
 namespace AD.Protocols.ADObjects;
 
@@ -165,7 +166,8 @@ public class ADpUser : ADpBaseObject
                 ArgumentException("No Distinguished Name found in the orgUnit object.  Anytime you retrieve an object from Active Directory you must retrieve this attribute.");
         
         // Calculate ParentPath
-        ParentPath = new ADSPath(DistinguishedName).GetParent();
+        Result<ADSPath> parentPathResult = new ADSPath(DistinguishedName).GetParent();
+        ParentPath = parentPathResult.IsSuccess ? parentPathResult.Value : null;    
         
         InCreationMode = false;
     }

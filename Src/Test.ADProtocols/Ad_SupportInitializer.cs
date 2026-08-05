@@ -55,11 +55,11 @@ public class Ad_SupportInitializer
         ADConnector.Initialize(ActiveDirConfig);
         Assert.That(ADConnector.IsConnected, Is.True, "[Ad_SupportInitializer_010");
 
-        UnitTestRoot   = ADConnector.DomainRoot.NewChildADSPath("ou=" + MASTER_AD_UNIT_TEST_ROOT);
+        UnitTestRoot = ADConnector.DomainRoot.AppendPaths("OU=" + MASTER_AD_UNIT_TEST_ROOT);
         if (!_isGroup)
-            UnitTestParent = UnitTestRoot.NewChildADSPath("ou=" + HelperMethods.UT_BASEOU_NAME);
+            UnitTestParent = UnitTestRoot.AppendPaths("ou=" + HelperMethods.UT_BASEOU_NAME);
         else
-            UnitTestParent = UnitTestRoot.NewChildADSPath("ou=" + HelperMethods.OU_UTGROUP);
+            UnitTestParent = UnitTestRoot.AppendPaths("ou=" + HelperMethods.OU_UTGROUP);
 
         return true;
     }
@@ -125,7 +125,7 @@ public class Ad_SupportInitializer
                 Result<ADpOrgUnit> result = ouProcessor.AddNew(newOuName, parentPath);
                 if (result.IsSuccess)
                 {
-                    return Result.Ok(parentPath.NewChildADSPath("ou=" + newOuName));
+                    return Result.Ok(parentPath.BuildChildADSPath("ou=" + newOuName));
                 }
 
                 if (result.IsFailed)

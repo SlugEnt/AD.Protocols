@@ -63,8 +63,8 @@ public class Program
 
 
         // List Groups
-        ADSPath UnitTestRoot = activeDirectoryConnector.DomainRoot.NewChildADSPath("ou=zUnitTesting");
-        ADSPath UnitTestParent = UnitTestRoot.NewChildADSPath("ou=UT");
+        ADSPath UnitTestRoot = activeDirectoryConnector.DomainRoot.BuildChildADSPath("ou=zUnitTesting");
+        ADSPath UnitTestParent = UnitTestRoot.BuildChildADSPath("ou=UT");
 
         string searchFilter = ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS;
         List<string> attributes   = [];

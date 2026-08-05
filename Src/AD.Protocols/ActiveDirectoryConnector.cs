@@ -76,7 +76,7 @@ public class ActiveDirectoryConnector : EngineBase
             DomainRoot = ADSPath.FromDomainName(_activeDirConfig.Domain);
             if (rootOU != "")
             {
-                RootDSE = RootDSE.NewChildADSPath("OU=" + rootOU);
+                RootDSE = RootDSE.BuildChildADSPath("OU=" + rootOU);
             }
 
 
@@ -731,7 +731,7 @@ public class ActiveDirectoryConnector : EngineBase
     /// <returns></returns>
     public ADSPath GetPasswordPolicyOU()
     {
-        ADSPath ouPath = DomainRoot.NewChildADSPath(ADpReadOnlyPasswordPolicy.ROOT_OU_PATH,false);
+        ADSPath ouPath = DomainRoot.BuildChildADSPath(ADpReadOnlyPasswordPolicy.ROOT_OU_PATH);
         return ouPath;
     }
 

@@ -422,8 +422,8 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
     /// <returns></returns>
     public Result Rename (T obj, string newCommonName)
     {
-        ADSPath  parentPath = new ADSPath(obj.DistinguishedName).GetParent();
-        Result<string> result     = Rename(obj.DistinguishedName, newCommonName, parentPath);
+        Result<ADSPath> parentPathResult = new ADSPath(obj.DistinguishedName).GetParent();
+        Result<string> result     = Rename(obj.DistinguishedName, newCommonName, parentPathResult.IsSuccess ? parentPathResult.Value : null);
         if (result.IsFailed)
             return Result.Fail(result.Errors);
         

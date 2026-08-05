@@ -36,7 +36,7 @@ public class ADpReadOnlyOrgUnit
             // We also set the Parent Path
             if (!string.IsNullOrEmpty(field))
             {
-                this.ParentPath = new ADSPath(field).GetParent();
+               // this.ParentPath = new ADSPath(field).GetParent();
             }
         }
     }

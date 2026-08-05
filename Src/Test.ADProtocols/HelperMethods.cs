@@ -25,8 +25,8 @@ public static class HelperMethods
     /// <returns></returns>
     public static ADSPath GetUT_BasePath(ADSPath domainRootPath)
     {
-        ADSPath path = domainRootPath.NewChildADSPath(UNIT_TEST_ROOT_OU);
-        ADSPath ut = path.NewChildADSPath(OU_UTBASE);
+        ADSPath path = domainRootPath.BuildChildADSPath(UNIT_TEST_ROOT_OU);
+        ADSPath ut = path.BuildChildADSPath(OU_UTBASE);
         return ut;
         //return domainRootPath.NewChildADSPath(OU_UTBASE);
     }
@@ -39,7 +39,7 @@ public static class HelperMethods
     /// <returns></returns>
     public static ADSPath GetUT_GroupBasePath(ADSPath domainRootPath)
     {
-        return domainRootPath.NewChildADSPath(OU_UTGROUP);
+        return domainRootPath.BuildChildADSPath(OU_UTGROUP);
     }
 
 

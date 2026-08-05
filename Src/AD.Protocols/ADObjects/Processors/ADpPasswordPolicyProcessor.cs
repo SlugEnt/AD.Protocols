@@ -17,7 +17,7 @@ public class ADpPasswordPolicyProcessor : ADpGenericProcessor<ADpPasswordPolicy>
         // Password Policy always has the same attributes. 
         AttrRetrieval_Default();
 
-        ParentPath = domainRoot.NewChildADSPath(PASS_POLICY_OU,false);
+        ParentPath = domainRoot.BuildChildADSPath(PASS_POLICY_OU);
     }
 
     
