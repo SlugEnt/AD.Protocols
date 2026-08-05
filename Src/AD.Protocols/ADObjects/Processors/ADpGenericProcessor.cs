@@ -98,13 +98,19 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
 
     protected abstract Result<T> CreateObjectFromAttributes(SearchResultAttributeCollection attributes);
 
-    
+
     /// <summary>
     /// Deletes the specified object from Active Directory.
     /// </summary>
     /// <param name="obj"></param>
     /// <returns></returns>
-    public Result Delete(T obj) { return Delete(obj.DistinguishedName); }
+    public Result Delete(T obj)
+    {
+        if (string.IsNullOrEmpty(obj.DistinguishedName))
+            obj.BuildDistinguishedName();
+        
+        return Delete(obj.DistinguishedName);
+    }
 
     
     /// <summary>
@@ -336,29 +342,38 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
                 {
                     AttributeBase attribute = attributeBase.Value;
 
-                    // Determine the type of modification to perform on the attribute.
-                    DirectoryAttributeModification modification = new()
+                    try
                     {
-                        Operation = ToOperation(attribute.OperationMode),
-                        Name      = attribute.Name
-                    };
-                    if (attribute is AttributeStringSingle ass)
-                        modification.Add(ass.Value);
+                        // Determine the type of modification to perform on the attribute.
+                        DirectoryAttributeModification modification = new()
+                        {
+                            Operation = ToOperation(attribute.OperationMode),
+                            Name      = attribute.Name
+                        };
+                        if (attribute is AttributeStringSingle ass)
+                            modification.Add(ass.Value);
 
-                    else if (attribute is AttributeByteArray aba)
-                        modification.Add(aba.Value);
-                    else if (attribute is AttributeDateTimeOffset ado)
-                        modification.Add(ado.Value);
-                    else if (attribute is AttributeDateTimeOffset adt)
-                        modification.Add(adt.Value);
-                    else if (attribute is AttributeInt ain)
-                        modification.Add(ain.Value);
-                    else
-                    {
-                        modification.AddRange((string[])attribute.Value);
+                        else if (attribute is AttributeByteArray aba)
+                            modification.Add(aba.Value);
+                        else if (attribute is AttributeDateTimeOffset ado)
+                            modification.Add(ado.Value);
+                        else if (attribute is AttributeDateTimeOffset adt)
+                            modification.Add(adt.Value);
+                        else if (attribute is AttributeInt ain)
+                            modification.Add(ain.Value);
+                        else if (attribute is AttributeTimeSpan ait)
+                            modification.Add(ait.Value);
+                        else
+                        {
+                            modification.AddRange((string[])attribute.Value);
+                        }
+
+                        modifications[i++] = modification;
                     }
-
-                    modifications[i++] = modification;
+                    catch (Exception e)
+                    {
+                        return Result.Fail(new ExceptionalError($"Failed attempting to add Attribute [{attribute.Name}] to the list to send to Active Directory.  Value: [{attribute.Value}]", e));
+                    }
                 }
 
                 ModifyRequest           modifyRequest    = new(obj.DistinguishedName, modifications);

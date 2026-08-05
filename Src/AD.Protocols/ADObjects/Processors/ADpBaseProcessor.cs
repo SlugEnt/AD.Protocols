@@ -89,6 +89,9 @@ public abstract class ADpBaseProcessor
         }
         catch (Exception e)
         {
+            if (e.Message.Contains("object does not exist"))
+                return Result.Ok();
+            
             return Result.Fail(new ExceptionalError($"Failed to delete {ObjectEnglishName}: {distinguishedName} Error: {e.Message}", e));
         }
     }

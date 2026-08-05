@@ -1,4 +1,5 @@
-﻿using SlugEnt.AD.Protocols;
+﻿using AD.Protocols.ADObjects.Fields;
+using SlugEnt.AD.Protocols;
 using SlugEnt.AD.Protocols.Attributes;
 using SlugEnt.FluentResults;
 using System.DirectoryServices.Protocols;
@@ -26,7 +27,7 @@ public class ADpPasswordPolicy : ADpBaseObject
     /// <param name="name"></param>
     /// <param name="parentPath"></param>
     /// <exception cref="ArgumentNullException"></exception>
-    public ADpPasswordPolicy(string name)
+    public ADpPasswordPolicy(string name, ADSPath parentPath)
     {
         if (string.IsNullOrEmpty(name))
             throw new ArgumentNullException(nameof(name));
@@ -36,6 +37,7 @@ public class ADpPasswordPolicy : ADpBaseObject
         Name       = name;
         CommonName = name;
         IsNew      = true;
+        ParentPath = parentPath;
 
         InCreationMode = false;
     }
@@ -126,6 +128,8 @@ public class ADpPasswordPolicy : ADpBaseObject
 
     }
 
+
+    public MultiValuedDNAttribute AppliesTo { get; internal set; } = new MultiValuedDNAttribute("msDS-PSOAppliesTo");
 
 
     #region Attributes

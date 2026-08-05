@@ -60,16 +60,6 @@ public class ADpGroupProcessor : ADpGenericProcessor<ADpGroup>
     public Result GetMembers(ADpGroup group)
     {
         return group.Members.GetMembersFromActiveDirectory(group.DistinguishedName,_ldapConnection);
-        /*
-        Result<HashSet<string>> result =  AD_RangeRetrieval(group.DistinguishedName, "member", MembersRetrievedPerRequest);
-        if (result.IsFailed)
-            return Result.Fail(result.Errors);
-
-        group.Members = result.Value;
-        
-        return Result.Ok();
-        */
-        
     }
 
 

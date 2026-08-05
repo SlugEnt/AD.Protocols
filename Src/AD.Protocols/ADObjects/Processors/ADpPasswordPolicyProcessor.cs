@@ -11,16 +11,18 @@ namespace AD.Protocols.ADObjects.Processors;
 public class ADpPasswordPolicyProcessor : ADpGenericProcessor<ADpPasswordPolicy>
 {
     public const string PASS_POLICY_OU = "CN=Password Settings Container,CN=System";
-    
-    public ADpPasswordPolicyProcessor(LdapConnection ldapConnection, ADSPath domainRoot) : base(ADpCommon.OBJ_CLASS_PASSWORD_POLICY, "Password Policy", ldapConnection)
-    { 
+
+
+    public ADpPasswordPolicyProcessor(LdapConnection ldapConnection,
+                                      ADSPath domainRoot) : base(ADpCommon.OBJ_CLASS_PASSWORD_POLICY, "Password Policy", ldapConnection)
+    {
         // Password Policy always has the same attributes. 
         AttrRetrieval_Default();
 
-        ParentPath = domainRoot.BuildChildADSPath(PASS_POLICY_OU);
+        ParentPath = domainRoot.CreateChild(PASS_POLICY_OU);
     }
 
-    
+
     /// <summary>
     /// Constructor for building PasswordPolicy object from Active Directory Attributes.  
     /// </summary>
@@ -30,16 +32,16 @@ public class ADpPasswordPolicyProcessor : ADpGenericProcessor<ADpPasswordPolicy>
     {
         ADpPasswordPolicy policy = new(attributes);
         ParentPath = new ADSPath(policy.DistinguishedName);
-        
+
         return Result.Ok(policy);
     }
 
-    
+
     /// <summary>
     /// Sets the Parent Path to be used for all saves of Password Policies.  They are always stored in the same folder off the root domain.
     /// </summary>
     public ADSPath ParentPath { get; private set; }
-    
+
 
     /// <summary>
     /// Set Default Attributes to be retrieved if none are defined at time of retrieval from AD
@@ -86,13 +88,30 @@ public class ADpPasswordPolicyProcessor : ADpGenericProcessor<ADpPasswordPolicy>
             {
                 obj.ParentPath = ParentPath;
             }
-                
+
             if (string.IsNullOrEmpty(obj.DistinguishedName))
             {
                 obj.BuildDistinguishedName();
             }
         }
+
         return base.ProcessorPreSave(obj);
     }
+
+    
+    /// <summary>
+    /// Returns the Applies To list for the passed Password Policy.  This is a list of all the groups that this password policy applies to.
+    /// </summary>
+    /// <param name="policy"></param>
+    /// <returns></returns>
+    public Result GetAppliesTo(ADpPasswordPolicy policy) { return policy.AppliesTo.GetMembersFromActiveDirectory(policy.DistinguishedName, _ldapConnection); }
+
+    
+    /// <summary>
+    /// Save Applies To changes to Active Directory.  This is done after the main object is saved, because the AppliesTo list is a separate object that needs to be saved after the main object is saved.
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <returns></returns>
+    protected override Result AfterSave(ADpPasswordPolicy obj) { return obj.AppliesTo.SaveChangesToActiveDirectory(_ldapConnection, obj.DistinguishedName); }
 }
 
