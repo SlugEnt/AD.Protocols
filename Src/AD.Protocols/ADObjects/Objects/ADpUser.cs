@@ -114,7 +114,8 @@ public class ADpUser : ADpBaseObject
                     UserAccountControlSetter = new UserAccountControl(ival, UserAccountControlHasChanged);
                     break;
 
-                case "lastLogon":   LastLogon   = ADFunctions.GetDateTime_FromLDAPPropertyLong(dirObj[0].ToString()!); break;
+                //case "lastLogon":   LastLogon   = ADFunctions.GetDateTime_FromLDAPPropertyLong(dirObj[0].ToString()!); break;
+                case "lastLogonTimestamp": LastLogon = ADFunctions.GetDateTime_FromLDAPPropertyLong(dirObj[0].ToString()!); break;
                 case "whenChanged": WhenChanged = ADFunctions.GetDateTime_FromLDAPProperty(dirObj[0].ToString()!); break;
                 case "whenCreated": WhenCreated = ADFunctions.GetDateTime_FromLDAPProperty(dirObj[0].ToString()!); break;
                 case "badPwdCount":
@@ -664,31 +665,6 @@ public class ADpUser : ADpBaseObject
             }
         }
     }
-
-
-    /// <summary>
-    ///  User Account Control value.  Which is actually a bunch of flags that create the value.
-    /// </summary>
-    /*public int UserAccountControl
-    {
-        get;
-        set
-        {
-            field = value;
-
-            // Do not add attribute to modification list if in initial creation mode.
-            if (InCreationMode)
-                return;
-
-            string         key       = ADpCommon.ATN_USER_ACCOUNT_CONTROL;
-            AttrUserAccountControl attrValue = new(value, EnumAttributeOperation.Modify);
-            if (!AttributesToUpdate.TryAdd(key, attrValue))
-            {
-                AttributesToUpdate[key] = attrValue;
-            }
-        }
-    }
-    */
 
     #endregion
 

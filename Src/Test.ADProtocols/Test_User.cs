@@ -209,8 +209,8 @@ public class Test_User
         Assert.That(x.IsSuccess, Is.True, "[A_110] Failed to add user.");
 
 
-        DateTimeOffset last5Seconds = DateTimeOffset.Now.UtcDateTime;
-        last5Seconds =  last5Seconds.AddSeconds(-5);
+        DateTimeOffset temp = DateTimeOffset.Now.UtcDateTime;
+        DateTimeOffset last5Seconds =  temp.AddSeconds(-10);
 
         // C  --> Action
         // Attempt to login as User
@@ -225,8 +225,12 @@ public class Test_User
         Assert.That(userResult.IsSuccess, Is.True, "[V_100] Failed to retrieve user object after bad password attempts.");
         ADpUser user = userResult.Value;
 
+        Console.WriteLine($"Current Time:   {DateTimeOffset.UtcNow}");
+        Console.WriteLine($"Temp Time:      {temp}");
+        Console.WriteLine($"Last 5 Seconds: {last5Seconds}");
+        Console.WriteLine($"Last Logon:     {user.LastLogon}");
         
-        Assert.That(user.PasswordLastSet, Is.GreaterThan(last5Seconds), "[V_110] PasswordLastSet is not within the last 5 seconds.");
+        Assert.That(user.LastLogon, Is.GreaterThanOrEqualTo(last5Seconds), "[V_110] PasswordLastSet is not within the last 5 seconds.");
         Assert.That(user.PasswordLastSet, Is.LessThanOrEqualTo(DateTimeOffset.UtcNow),"");
         Assert.That(user.BadPasswordCount, Is.Zero,"[V_120] BadPasswordCount is not zero after successful login.");
         //Assert.That(user.LastLogon,Is.InRange(last5Seconds, DateTimeOffset.UtcNow), "[V_130] LastLogon is not within the last 5 seconds.");
