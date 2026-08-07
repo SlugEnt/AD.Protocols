@@ -125,11 +125,10 @@ public class ADpPasswordPolicy : ADpBaseObject
         ParentPath = parentPathResult.IsSuccess ? parentPathResult.Value : null;
 
         InCreationMode = false;
-
     }
 
 
-    public MultiValuedDNAttribute AppliesTo { get; internal set; } = new MultiValuedDNAttribute("msDS-PSOAppliesTo");
+    public MultiValuedDNAttribute AppliesTo { get; internal set; } = new MultiValuedDNAttribute("msDS-PSOAppliesTo", true, true);
 
 
     #region Attributes

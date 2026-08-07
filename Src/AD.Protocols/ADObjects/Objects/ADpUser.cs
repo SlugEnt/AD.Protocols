@@ -1,6 +1,7 @@
 ﻿using SlugEnt.AD.Protocols;
 using SlugEnt.AD.Protocols.Attributes;
 using System.DirectoryServices.Protocols;
+using System.Reflection;
 using System.Text;
 using AD.Protocols.ADObjects.Fields;
 using SlugEnt.FluentResults;
@@ -17,7 +18,13 @@ public class ADpUser : ADpBaseObject
     /// at same time as the other attributes.
     /// </summary>
     internal bool PasswordHasBeenSet { get; set; }
-    
+
+    /// <summary>
+    /// Builds a new ADpUser object with the specified name and parent path.
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="parentPath"></param>
+    /// <exception cref="ArgumentNullException"></exception>
     public ADpUser(string name, ADSPath parentPath)
     {
         {
@@ -38,9 +45,15 @@ public class ADpUser : ADpBaseObject
         }
     }
 
+    
+    /// <inheritdoc cref="ADpUser(string, ADSPath)"/>
+    /// <param name="userName"></param>
+    /// <param name="parentOu"></param>
+    public ADpUser(string userName, ADpOrgUnit parentOu) : this(userName,parentOu.Path) {}
 
+    
     /// <summary>
-    /// Constructor that starts the process of creating a new user.
+    /// Constructor that starts the process of creating a new user.  This is a simplistic constructor.  Caller must set parentPath at minimum to save to AD
     /// </summary>
     /// <param name="name"></param>
     public ADpUser(string name) : base(name)
@@ -49,8 +62,9 @@ public class ADpUser : ADpBaseObject
         UserAccountControlSetter = new UserAccountControl(UserAccountControlHasChanged);
     }
 
+
     /// <summary>
-    /// Constructor that starts the process of creating a new user.
+    /// Constructor that starts the process of creating a new user.  This is the most basic constructor. Caller must give a name and parentPath to save.
     /// </summary>
     public ADpUser() : base()
     {
@@ -698,7 +712,8 @@ public class ADpUser : ADpBaseObject
     /// <summary>
     /// The groups this user is a member of.
     /// </summary>
-    public HashSet<string> MemberOfGroups { get; internal set; } = new HashSet<string>();
+    public MultiValuedUserMemberOf MemberOfGroups { get; internal set; } = new MultiValuedUserMemberOf("memberOf");
+//    public HashSet<string> MemberOfGroups { get; internal set; } = new HashSet<string>();
 
 
     #region "Actions"
@@ -738,11 +753,9 @@ public class ADpUser : ADpBaseObject
         if (!groupDistinguishedName.StartsWith("CN=", StringComparison.CurrentCultureIgnoreCase))
             throw new ArgumentException("The distinguished name must start with 'CN='.", nameof(groupDistinguishedName));
 
-        // If for some reason we have previously added this user to the RemovedGroups list, remove them from that list AND DO NOT ADD as NewGroup
-        if (RemovedGroups.Contains(groupDistinguishedName))
-            RemovedGroups.Remove(groupDistinguishedName);
-        else
-            NewGroups.Add(groupDistinguishedName);
+        // If for some reason we have previously added this user to the RemovedMembers list, remove them from that list AND DO NOT ADD as NewMember
+        if (MemberOfGroups.AddMember(groupDistinguishedName))
+            return;
     }
 
 
@@ -755,16 +768,13 @@ public class ADpUser : ADpBaseObject
     /// <exception cref="ArgumentException"></exception>
     public void RemoveUserFromGroup(string groupDistinguishedName)
     {
+
         if (string.IsNullOrEmpty(groupDistinguishedName))
             throw new ArgumentNullException(nameof(groupDistinguishedName));
         if (!groupDistinguishedName.StartsWith("CN=", StringComparison.CurrentCultureIgnoreCase))
             throw new ArgumentException("The distinguished name must start with 'CN='.", nameof(groupDistinguishedName));
 
-        // If for some reason we have previously added this user to the NewGroups list, remove them from that list.
-        if (NewGroups.Contains(groupDistinguishedName))
-            NewGroups.Remove(groupDistinguishedName);
-        else
-            RemovedGroups.Add(groupDistinguishedName);
+        MemberOfGroups.RemoveMember(groupDistinguishedName, false);
     }
 }
 

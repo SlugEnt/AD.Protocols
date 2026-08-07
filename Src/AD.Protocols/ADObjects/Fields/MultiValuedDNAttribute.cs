@@ -1,4 +1,5 @@
 ﻿using System.DirectoryServices.Protocols;
+using AD.Protocols.ADObjects.Objects;
 using SlugEnt.FluentResults;
 
 namespace AD.Protocols.ADObjects.Fields;
@@ -14,6 +15,17 @@ public class MultiValuedDNAttribute
     internal HashSet<string> Removals { get; set; } = new HashSet<string>();    
     internal HashSet<string> CurrentValues { get; set; } = new HashSet<string>();
 
+    /// <summary>
+    /// If true. the attribute will allow users to be added.
+    /// </summary>
+    public bool AllowUsers { get; set; } = true;
+
+    /// <summary>
+    /// If true, the attribute will allow groups to be added.
+    /// </summary>
+    public bool AllowGroups { get; set; } = true;
+    
+    
     /// <summary>
     /// Initializes the attribute with existing values from Active Directory.
     /// </summary>
@@ -51,6 +63,35 @@ public class MultiValuedDNAttribute
 
 
     /// <summary>
+    /// Adds an ADpUser object to the attribute IF AllowUsers is set to true.  If AllowUsers is false, an exception is thrown.
+    /// </summary>
+    /// <param name="user"></param>
+    /// <returns></returns>
+    public bool AddMember(ADpUser user)
+    {
+        if (AllowUsers)
+            return AddMember(user.DistinguishedName);
+        
+        throw new ArgumentException("Adding users is not allowed for this attribute.");
+    }
+
+
+    /// <summary>
+    /// Adds an ADpGroup object to the attribute IF AllowGroups is set to true.  If AllowGroups is false, an exception is thrown.
+    /// </summary>
+    /// <param name="group"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
+    public bool AddMember(ADpGroup group)
+    {
+        if (AllowGroups)
+            return AddMember(group.DistinguishedName);
+        
+        throw new ArgumentException("Adding groups is not allowed for this attribute.");
+    }
+    
+
+    /// <summary>
     /// Removes a Distinguished Name (DN) from the attribute.
     /// This removal will be staged for saving to Active Directory.
     /// </summary>
@@ -84,6 +125,39 @@ public class MultiValuedDNAttribute
     }
 
 
+    /// <summary>
+    /// Removes a user from this attribute, IF AllowUsers is set to true.  If AllowUsers is false, an exception is thrown.
+    /// </summary>
+    /// <param name="user"></param>
+    /// <param name="forceRemove"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
+    public bool RemoveMember (ADpUser user, bool forceRemove)
+    {
+        if (AllowUsers)
+            return RemoveMember(user.DistinguishedName, forceRemove);
+
+        throw new ArgumentException("Removing users is not allowed for this attribute.");
+    }
+
+
+    /// <summary>
+    /// Removes a group from this attribute, IF AllowGroups is set to true.  If AllowGroups is false, an exception is thrown.
+    /// </summary>
+    /// <param name="group"></param>
+    /// <param name="forceRemove"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
+    public bool RemoveMember(ADpGroup group,
+                             bool forceRemove)
+    {
+        if (AllowGroups)
+            return RemoveMember(group.DistinguishedName, forceRemove);
+
+        throw new ArgumentException("Removing groups is not allowed for this attribute.");
+    }
+    
+    
     /// <summary>
     /// Gets a collection of all current values for the attribute, including staged additions and removals.
     /// </summary>
@@ -130,7 +204,14 @@ public class MultiValuedDNAttribute
     /// Constructs a new MultiValuedDNAttribute object with the specified attribute name.
     /// </summary>
     /// <param name="attributeName">The name of the Active Directory attribute.</param>
-    public MultiValuedDNAttribute(string attributeName) { AttributeName = attributeName; }
+    /// <param name="allowUsers">Indicates whether users are allowed for this attribute.</param>
+    /// <param name="allowGroups">Indicates whether groups are allowed for this attribute.</param>
+    public MultiValuedDNAttribute(string attributeName, bool allowUsers, bool allowGroups) 
+    { 
+        AttributeName = attributeName; 
+        AllowUsers = allowUsers;
+        AllowGroups = allowGroups;
+    }
 
 
     /// <summary>
@@ -139,7 +220,7 @@ public class MultiValuedDNAttribute
     /// <param name="ldapConnection">The LDAP connection to use for the modification request.</param>
     /// <param name="parentDistinguishedName">The distinguished name (DN) of the parent object in Active Directory.</param>
     /// <returns>A Result indicating success or failure of the operation.</returns>
-    internal Result SaveChangesToActiveDirectory(LdapConnection ldapConnection, string parentDistinguishedName)
+    internal virtual Result SaveChangesToActiveDirectory(LdapConnection ldapConnection, string parentDistinguishedName)
     {
         // If the object has members that were added or removed, process them here.
         if (Additions.Count > 0 || Removals.Count > 0)

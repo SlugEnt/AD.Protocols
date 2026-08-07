@@ -156,7 +156,7 @@ public class ADpGroup : ADpBaseObject
     #region "Attributes"
 
 
-    public MultiValuedDNAttribute Members { get; internal set; } = new MultiValuedDNAttribute("member");
+    public MultiValuedDNAttribute Members { get; internal set; } = new MultiValuedDNAttribute("member", true, true);
     
     
     // TODO:  Add the ability to add/remove members from a group.  This will require a new attribute type that can handle adding/removing members from a group.

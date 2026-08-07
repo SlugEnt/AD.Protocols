@@ -64,12 +64,6 @@ public class ADpGroupProcessor : ADpGenericProcessor<ADpGroup>
 
 
     /// <summary>
-    /// How many groups are retrieved per request.  Active Directory has a limit of 1500 members per request, so this value should be set to 1500 or less.  The default is 1400.
-    /// </summary>
-    internal int GroupsRetrievedPerRequest { get; set; } = 1400;
-
-
-    /// <summary>
     /// After saving the group object, this method checks for any new members to add or existing members to remove from the group.
     /// It processes these changes by sending appropriate LDAP requests to modify the group's membership in Active Directory.
     /// </summary>
@@ -78,75 +72,6 @@ public class ADpGroupProcessor : ADpGenericProcessor<ADpGroup>
     protected override Result AfterSave(ADpGroup obj)
     {
         return obj.Members.SaveChangesToActiveDirectory(_ldapConnection,obj.DistinguishedName);
-        
-        /*
-        // If the object has members that were added or removed, process them here.
-        if (obj.NewMembers.Count > 0 || obj.RemovedMembers.Count > 0)
-        {
-            try
-            {
-                var request = new ModifyRequest(obj.DistinguishedName);
-
-                // Process Adds
-                if (obj.NewMembers.Count > 0)
-                {
-                    DirectoryAttributeModification memberModification = new DirectoryAttributeModification
-                    {
-                        Name      = "member",
-                        Operation = DirectoryAttributeOperation.Add
-                    };
-
-                    foreach (string member in obj.NewMembers)
-                    {
-                        memberModification.Add(member);
-                    }
-
-                    request.Modifications.Add(memberModification);
-                }
-
-                if (obj.RemovedMembers.Count > 0)
-                {
-                    DirectoryAttributeModification memberModification = new DirectoryAttributeModification
-                    {
-                        Name      = "member",
-                        Operation = DirectoryAttributeOperation.Delete
-                    };
-
-                    foreach (string member in obj.RemovedMembers)
-                    {
-                        memberModification.Add(member);
-                    }
-                    request.Modifications.Add(memberModification);
-                }
-
-
-                ModifyResponse response = (ModifyResponse)_ldapConnection.SendRequest(request);
-                if (response.ResultCode == ResultCode.Success)
-                {
-                    foreach (string member in obj.NewMembers)
-                    {
-                        obj.Members.Add(member);
-                    }
-                    foreach (string member in obj.RemovedMembers)
-                    {
-                        obj.Members.Remove(member);
-                    }
-                    obj.RemovedMembers.Clear();
-                    obj.NewMembers.Clear();
-                    return Result.Ok();
-                }
-
-                // Failure.  
-                return Result.Fail(response.ErrorMessage);
-            }
-            catch (Exception ex)
-            {
-                return Result.Fail(ex.Message);
-            }
-        }
-
-        return Result.Ok();
-        */
     }
 
     /// <summary>
@@ -168,4 +93,19 @@ public class ADpGroupProcessor : ADpGenericProcessor<ADpGroup>
         
         throw new Exception($"Failed to retrieve child groups under {parentDn.Path}. Error: {result.Errors[0].Message}");
     }
+
+
+    
+    /// <inheritdoc cref="GetAllChildGroups(ADSPath, SearchScope)"/>
+    /// <param name="parentOrgUnit"></param>
+    /// <param name="searchScope"></param>
+    /// <returns></returns>
+    public List<ADpGroup> GetAllChildGroups(ADpOrgUnit parentOrgUnit,
+                                            SearchScope searchScope = SearchScope.OneLevel)
+    {
+        return GetAllChildGroups(parentOrgUnit.Path, searchScope);
+    }
+    
+    
+    
 }

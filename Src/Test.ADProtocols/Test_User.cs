@@ -701,25 +701,25 @@ public class Test_User
         // D --> Act - Retrieve the Member of for the user.
         Result getResult = userProcessor.GetMemberOfs(userA);
         Assert.That(getResult.IsSuccess,Is.True,"[D_100] Failed to get member ofs for user.");
-        Assert.That(userA.MemberOfGroups.Count, Is.EqualTo(testGroups.Count), "[D_110] User is not a member of the expected number of groups.");
+        Assert.That(userA.MemberOfGroups.CurrentValues.Count, Is.EqualTo(testGroups.Count), "[D_110] User is not a member of the expected number of groups.");
 
         // E --> Remove the user from a group and verify the change is reflected in the MemberOf list.
-        ADpUser userB = userProcessor.Get(userA.DistinguishedName).Value;
-        userB.RemoveUserFromGroup(groups[0].DistinguishedName);
+        //ADpUser userB = userProcessor.Get(userA.DistinguishedName).Value;
+        userA.RemoveUserFromGroup(groups[0].DistinguishedName);
         
         // Retrieve the group and ensure it has 1 member before removal
         ADpGroup groupB = groupProcessor.Get(groups[0].DistinguishedName).Value;
         groupProcessor.GetMembers(groupB);
-        Assert.That(groupB.Members.CurrentValues.Count, Is.EqualTo(1), "[D_120] Group does not have exactly 1 member before removal.");
+        Assert.That(groupB.Members.CurrentValues.Count, Is.EqualTo(1), "[E_100] Group does not have exactly 1 member before removal.");
 
         // F --> Act - Update the user to reflect the removal from the group.
-        Result updateResult = userProcessor.Update(userB);
+        Result updateResult = userProcessor.Update(userA);
         Assert.That(updateResult.IsSuccess, Is.True, "[F_100] Failed to update user after removing from group.");
 
         // G --> Act - Retrieve the Member of for the user again.
         ADpGroup groupC = groupProcessor.Get(groups[0].DistinguishedName).Value;
         groupProcessor.GetMembers(groupC);
-        Assert.That(groupC.Members.CurrentValues.Count, Is.EqualTo(0), "[D_120] Group still has members after removing the user   .");
+        Assert.That(groupC.Members.CurrentValues.Count, Is.EqualTo(0), "[G_100] Group still has members after removing the user   .");
 
         // H --> Act - add user to group.
         ADpUser userD = userProcessor.Get(userA.DistinguishedName).Value;
@@ -735,5 +735,116 @@ public class Test_User
         // K --> Verify the user is now a member of the group again.
         Assert.That( ADpBaseObject.EqualSameObject(groupD.Members.CurrentValues.First(),userA.DistinguishedName), Is.True, "[K_100] User is not a member of the group after being added back.");
     }
+
+
+    /// <summary>
+    /// Test that ambiguous name search returns the correct users when multiple users share a common attribute value.
+    /// In this test, we create 6 users, 5 of which share a common name value in different attributes (CN, LastName, FirstName, DisplayName, SAMAccount),
+    /// and 1 user who does not share that value. We then search for the common name and verify that only the 5 matching users are returned.
+    /// </summary>
+    [Test]
+    public void AmbiguousNameSearch()
+    {
+        // A --> Setup
+        string commonNameValue = "Smith";
+        ADpOrgUnit newOu = asi.CreateRandomOuNew();
+
+        // Create 6 users. 5 who share some common attribute value, and 1 who does not share that value.  Then search for the common value and verify that only the 5 users are returned.
+        // User A - CN and name attribute contain the same value "Smith"
+        string cnName = commonNameValue + " " + asi.Faker.Person.FirstName;
+        ADpUser    userA  = new ADpUser(cnName, newOu);
+
+        string  lastName = commonNameValue;
+        ADpUser userB    = new ADpUser("Frank Adams", newOu);
+        userB.LastName = lastName;
+        
+        string firstName = commonNameValue;
+        ADpUser userC = new ADpUser("John Jefferson" , newOu);
+        userC.FirstName = firstName;
+        
+        string displayName = commonNameValue;
+        ADpUser userD = new ADpUser("Abigail Jones",newOu);
+        userD.DisplayName = displayName;
+
+        string samAccount = commonNameValue;
+        ADpUser userE = new ADpUser("Albert Einstein",newOu);
+        userE.SAMAccount = samAccount;  
+
+        // Now create user who does not have that name anywhere.
+        ADpUser userF = new ADpUser("Isaac Newton", newOu);
+        userF.DisplayName = "Isaac Newton";
+        userF.FirstName   = "Isaac";
+        userF.LastName    = "Newton";
+        userF.SAMAccount  = "IN20";
+
+        // B --> Act - Add users to AD.
+        _userProcessor.AddNew(userA);
+        _userProcessor.AddNew(userB);
+        _userProcessor.AddNew(userC);
+        _userProcessor.AddNew(userD);
+        _userProcessor.AddNew(userE);
+        _userProcessor.AddNew(userF);
+
+        // For debug purposes , print out the distinguished names of the users added.
+        Console.WriteLine($"User A DN: {userA.DistinguishedName}");
+        Console.WriteLine($"User B DN: {userB.DistinguishedName}");
+        Console.WriteLine($"User C DN: {userC.DistinguishedName}");
+        Console.WriteLine($"User D DN: {userD.DistinguishedName}");
+        Console.WriteLine($"User E DN: {userE.DistinguishedName}");
+        Console.WriteLine($"User F DN: {userF.DistinguishedName}");
+
+        // Verify they all exist
+        Result<bool> userAExists = _userProcessor.Exists(userA);
+        Result<bool> userBExists = _userProcessor.Exists(userB);
+        Result<bool> userCExists = _userProcessor.Exists(userC);
+        Result<bool> userDExists = _userProcessor.Exists(userD);
+        Result<bool> userEExists = _userProcessor.Exists(userE);
+        Result<bool> userFExists = _userProcessor.Exists(userF);
+
+        // B --> Act - Verify they all exist
+        Assert.That(userAExists.IsSuccess && userAExists.Value, Is.True, "[B_200] User A did not get added.");
+        Assert.That(userBExists.IsSuccess && userBExists.Value, Is.True, "[B_210] User B did not get added.");
+        Assert.That(userCExists.IsSuccess && userCExists.Value, Is.True, "[B_220] User C did not get added.");
+        Assert.That(userDExists.IsSuccess && userDExists.Value, Is.True, "[B_230] User D did not get added.");
+        Assert.That(userEExists.IsSuccess && userEExists.Value, Is.True, "[B_240] User E did not get added.");
+        Assert.That(userFExists.IsSuccess && userFExists.Value, Is.True, "[B_250] User F did not get added.");
+
+        // C --> Act - Search for ambiguous name
+        Result<List<ADpUser>> searchResult = _userProcessor.FindByAmbiguosNameResolution(commonNameValue, newOu);
+        Assert.That(searchResult.IsSuccess, Is.True, "[C_100] Failed to search for ambiguous name.");
+
+        // D --> Verify We have results
+        Assert.That(searchResult.Value, Is.Not.Null, "[D_100] Search result should not be null.");
+        Assert.That(searchResult.Value.Count, Is.EqualTo(5), "[D_110] Should have found 5 users matching the ambiguous name.");
+
+        // E --> Ensure the non-matching user is not in the list
+        bool foundUserF = searchResult.Value.Any(u => u.DistinguishedName == userF.DistinguishedName);
+        Assert.That(foundUserF, Is.False, "[E_120] User F (Isaac Newton) should not be in the ambiguous search results.");
+
+        // F --> Ensure the matching users are in the list
+        bool foundUserA = searchResult.Value.Any(u => u.DistinguishedName == userA.DistinguishedName);
+        Assert.That(foundUserA, Is.True, "[F_130] User A (Smith [FirstName]) should be in the ambiguous search results.");
+
+        bool foundUserB = searchResult.Value.Any(u => u.DistinguishedName == userB.DistinguishedName);
+        Assert.That(foundUserB, Is.True, "[F_140] User B (Frank Adams, LastName=Smith) should be in the ambiguous search results.");
+
+        bool foundUserC = searchResult.Value.Any(u => u.DistinguishedName == userC.DistinguishedName);
+        Assert.That(foundUserC, Is.True, "[F_150] User C (John Jefferson, FirstName=Smith) should be in the ambiguous search results.");
+
+        bool foundUserD = searchResult.Value.Any(u => u.DistinguishedName == userD.DistinguishedName);
+        Assert.That(foundUserD, Is.True, "[F_160] User D (Abigail Jones, DisplayName=Smith) should be in the ambiguous search results.");
+
+        bool foundUserE = searchResult.Value.Any(u => u.DistinguishedName == userE.DistinguishedName);
+        Assert.That(foundUserE, Is.True, "[F_170] User E (Albert Einstein, SAMAccount=Smith) should be in the ambiguous search results.");
+
+        // Z --> Cleanup
+        _userProcessor.Delete(userA);
+        _userProcessor.Delete(userB);
+        _userProcessor.Delete(userC);
+        _userProcessor.Delete(userD);
+        _userProcessor.Delete(userE);
+        _userProcessor.Delete(userF);
+    }
+
 }
 

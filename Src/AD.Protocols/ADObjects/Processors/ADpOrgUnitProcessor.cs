@@ -1,8 +1,6 @@
 ﻿using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
-using AD.Protocols.ADObjects;
 using System.DirectoryServices.Protocols;
-using AD.Protocols.ADObjects.Objects;
 
 namespace AD.Protocols.ADObjects;
 
@@ -21,6 +19,15 @@ public class ADpOrgUnitProcessor : ADpGenericProcessor<ADpOrgUnit>
     {
         ADpOrgUnit orgUnit                = new(attributes);
         return Result.Ok(orgUnit);
+    }
+
+
+    /// <inheritdoc cref="GetAllChildOrgUnits(ADSPath)"/>
+    /// <param name="parentOu"></param>
+    /// <returns></returns>
+    public Result<List<ADpOrgUnit>> GetAllChildOrgUnits(ADpOrgUnit parentOu)
+    {
+        return GetAllChildOrgUnits(parentOu.Path);
     }
 
 
@@ -68,6 +75,16 @@ public class ADpOrgUnitProcessor : ADpGenericProcessor<ADpOrgUnit>
         if (result.IsFailed)
             return Result.Fail<ADpOrgUnit>(result.Errors);
         return Result.Ok(newOu);
+    }
+
+
+    /// <inheritdoc cref="AddNew(string, ADSPath)"/>
+    /// <param name="ouName">Name to be given to the OU</param>
+    /// <param name="parentOu">Parent OU under which the new OU will be created</param>
+    public Result<ADpOrgUnit> AddNew(string ouName,
+                                     ADpOrgUnit parentOu)
+    {
+        return AddNew(ouName, parentOu.Path);
     }
 }
 

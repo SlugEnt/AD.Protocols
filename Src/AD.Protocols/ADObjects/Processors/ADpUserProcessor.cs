@@ -1,8 +1,7 @@
-﻿using System.Diagnostics.Contracts;
-using AD.Protocols.ADObjects.Objects;
-using SlugEnt.AD.Protocols;
+﻿using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
 using System.DirectoryServices.Protocols;
+using AD.Protocols.ADObjects.Fields;
 
 namespace AD.Protocols.ADObjects;
 
@@ -15,10 +14,9 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     /// Constructor
     /// </summary>
     /// <param name="ldapConnection"></param>
-    public ADpUserProcessor(LdapConnection ldapConnection) : base (ADpCommon.OBJ_CLASS_USER,"user",ldapConnection)
-    { }
+    public ADpUserProcessor(LdapConnection ldapConnection) : base(ADpCommon.OBJ_CLASS_USER, "user", ldapConnection) { }
 
-    
+
     protected override Result<ADpUser> CreateObjectFromAttributes(SearchResultAttributeCollection attributes)
     {
         ADpUser user = new(attributes);
@@ -31,6 +29,7 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     /// How many members are retrieved per request.  Active Directory has a limit of 1500 members per request, so this value should be set to 1500 or less.  The default is 1400.
     /// </summary>
     internal int GroupsRetrievedPerRequest { get; set; } = 1400;
+
 
     /// <summary>
     /// Set Default Attributes to be retrieved if none are defined at time of retrieval from AD
@@ -48,7 +47,8 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
         AttributeRetrieverMgr.AddAttribute("userAccountControl");
     }
 
-    public void AttrRetrieval_Office ()
+
+    public void AttrRetrieval_Office()
     {
         AttributeRetrieverMgr.AddAttribute("title");
         AttributeRetrieverMgr.AddAttribute("department");
@@ -70,10 +70,12 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
         AttributeRetrieverMgr.AddAttribute("lockoutTime");
         AttributeRetrieverMgr.AddAttribute("lockoutDuration");
         AttributeRetrieverMgr.AddAttribute("pwdLastSet");
+
         // Do not appear to be updated in AD....
         //AttributeRetrieverMgr.AddAttribute("lastLogon");
         //AttributeRetrieverMgr.AddAttribute("lastLogoff");
         AttributeRetrieverMgr.AddAttribute("lastLogonTimestamp");
+
         // TODO need to add this to the ADpUser object as a DateTime property.  It is currently a long.
         //        AttributeRetrieverMgr.AddAttribute("accountExpires");
         AttributeRetrieverMgr.AddAttribute("userAccountControl");
@@ -101,7 +103,7 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
                 final.AddError(new Error("Failure in AfterSave_PasswordUpdate").CausedBy(x.Errors));
         }
 
-        if (obj.NewGroups.Count > 0 || obj.RemovedGroups.Count > 0)
+        if (obj.MemberOfGroups.Additions.Count > 0 || obj.MemberOfGroups.Removals.Count > 0)
         {
             y = AfterSave_ChangeGroupMembership(obj);
             if (y.IsFailed)
@@ -150,81 +152,17 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     /// <returns></returns>
     protected Result AfterSave_ChangeGroupMembership(ADpUser obj)
     {
-        try
-        {
-            Result final = new();
-
-            // Process Adds
-            if (obj.NewGroups.Count > 0)
-            {
-                foreach (string member in obj.NewGroups)
-                {
-                    var request = new ModifyRequest(member);
-                    DirectoryAttributeModification memberModification = new DirectoryAttributeModification
-                    {
-                        Name      = "member",
-                        Operation = DirectoryAttributeOperation.Add
-                    };
-
-                    memberModification.Add(obj.DistinguishedName);
-                    request.Modifications.Add(memberModification);
-                    ModifyResponse r1 = (ModifyResponse)_ldapConnection.SendRequest(request);
-                    if (r1.ResultCode != ResultCode.Success)
-                    {
-                        final.AddError(new Error($"Failure in AfterSave_ChangeGroupMembership - AddGroups:  Group: {member}  User: {obj.DistinguishedName}").CausedBy(r1.ErrorMessage));
-                    }
-                }
-            }
-
-            if (obj.RemovedGroups.Count > 0)
-            {
-                foreach (string member in obj.RemovedGroups)
-                {
-                    var request = new ModifyRequest(member);
-                    DirectoryAttributeModification memberModification = new DirectoryAttributeModification
-                    {
-                        Name      = "member",
-                        Operation = DirectoryAttributeOperation.Delete
-                    };
-
-                    memberModification.Add(obj.DistinguishedName);
-                    request.Modifications.Add(memberModification);
-                    ModifyResponse r1 = (ModifyResponse)_ldapConnection.SendRequest(request);
-                    if (r1.ResultCode != ResultCode.Success)
-                    {
-                        final.AddError(new Error($"Failure in AfterSave_ChangeGroupMembership - RemoveGroups:  Group: {member}  User: {obj.DistinguishedName}").CausedBy(r1.ErrorMessage));
-                    }
-                }
-            }
-
-
-            if (final.IsSuccess)
-            {
-                foreach (string objNewGroup in obj.NewGroups)
-                {
-                    obj.MemberOfGroups.Add(objNewGroup);
-                }
-                foreach (string member in obj.RemovedGroups)
-                {
-                    obj.MemberOfGroups.Remove(member);
-                }
-                obj.RemovedGroups.Clear();
-                obj.NewGroups.Clear();
-                return Result.Ok();
-            }
-
-            // Failure.  
-            return Result.Fail(final.Errors);
-        }
-        catch (Exception ex)
-        {
-            return Result.Fail(ex.Message);
-        }
-    
-
-        return Result.Ok();
-
+        return obj.MemberOfGroups.SaveChangesToActiveDirectory(_ldapConnection, obj.DistinguishedName);
     }
+
+
+    /// <inheritdoc cref="GetAllChildUsers(ADSPath, SearchScope)"/>
+    public List<ADpUser> GetAllChildUsers(ADpOrgUnit parentOu,
+                                          SearchScope searchScope = SearchScope.OneLevel)
+    {
+        return GetAllChildUsers(parentOu.Path, searchScope);
+    }
+
 
     /// <summary>
     /// Returns a list of users located at a particular path in Active Directory.  This is a one-level search, so it will only return users that are direct children of the specified path.
@@ -232,10 +170,11 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     /// <param name="parentDn"></param>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
-    public List<ADpUser> GetAllChildUsers(ADSPath parentDn,SearchScope searchScope = SearchScope.OneLevel)
+    public List<ADpUser> GetAllChildUsers(ADSPath parentDn,
+                                          SearchScope searchScope = SearchScope.OneLevel)
     {
-        string searchFilter = $"(&(objectClass={ADpCommon.OBJ_CLASS_USER}))";
-        Result<List<ADpUser>> result = Find(parentDn.Path, searchScope, searchFilter);
+        string                searchFilter = $"(&(objectClass={ADpCommon.OBJ_CLASS_USER}))";
+        Result<List<ADpUser>> result       = Find(parentDn.Path, searchScope, searchFilter);
 
         if (result.IsSuccess)
             return result.Value;
@@ -247,6 +186,59 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     }
 
 
+    /// <inheritdoc cref="FindByAmbiguosNameResolution(string, ADSPath, SearchScope)"/>
+    /// <param name="searchName"></param>
+    /// <param name="orgUnit">The Ou object that is the starting point for the search</param>
+    /// <param name="searchScope"></param>
+    /// <returns></returns>
+
+    public Result<List<ADpUser>> FindByAmbiguosNameResolution(string searchName,
+                                                              ADpOrgUnit orgUnit,
+                                                              SearchScope searchScope = SearchScope.Subtree)
+    {
+        return FindByAmbiguosNameResolution(searchName, orgUnit.Path, searchScope);
+    }
+
+
+    /// <summary>
+    /// Attempts to find a user by their name using Ambiguous Name Resolution (ANR).  This is a search that will return any user that
+    /// has a name that matches the search string.  It is not an exact match, and may return multiple users.  It is a wildcard search,
+    /// so it will return any user that has a name that contains the search string.
+    /// </summary>
+    /// <param name="searchName"></param>
+    /// <param name="startingSearchPath"></param>
+    /// <param name="searchScope"></param>
+    /// <returns></returns>
+    public Result<List<ADpUser>> FindByAmbiguosNameResolution(string searchName,
+                                                              ADSPath startingSearchPath,
+                                                              SearchScope searchScope = SearchScope.Subtree)
+    {
+        string                searchFilter = $"(&(objectCategory=person)(objectClass={ADpCommon.OBJ_CLASS_USER})(anr={searchName}))";
+        Result<List<ADpUser>> result       = Find(startingSearchPath.Path, searchScope, searchFilter);
+        return result;
+    }
+
+
+    /// <inheritdoc cref="GetBy_UPN(string, ADSPath, SearchScope)"/>
+    /// <param name="upnName"></param>
+    /// <param name="startingOu">The Ou object that is the starting point for the search</param>
+    /// <param name="searchScope"></param>
+    /// <returns></returns>
+
+
+    /// <inheritdoc cref="GetBy_UPN(string, ADSPath, SearchScope)"/>
+    /// <param name="upnName"></param>
+    /// <param name="startingSearchPath"></param>
+    /// <param name="searchScope"></param>
+    /// <returns></returns>
+    public Result<ADpUser> GetBy_UPN(string upnName,
+                                     ADpOrgUnit startingOu,
+                                     SearchScope searchScope = SearchScope.Subtree)
+    {
+        return GetBy_UPN(upnName, startingOu.Path, searchScope);
+    }
+
+
     /// <summary>
     /// Retrieves a user by their UPN (User Principal Name).  This is a unique attribute, so it should only return one user.  If multiple users are found, an error will be returned.
     /// </summary>
@@ -255,13 +247,13 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     /// <param name="searchScope"></param>
     /// <returns></returns>
     public Result<ADpUser> GetBy_UPN(string upnName,
-                                ADSPath startingSearchPath,
-                                SearchScope searchScope = SearchScope.Subtree)
+                                     ADSPath startingSearchPath,
+                                     SearchScope searchScope = SearchScope.Subtree)
     {
         Result<List<ADpUser>> result = FindByAttribute(startingSearchPath.Path,
-                                                 ADpCommon.ATN_UPN,
-                                                 upnName,
-                                                 searchScope);
+                                                       ADpCommon.ATN_UPN,
+                                                       upnName,
+                                                       searchScope);
         if (result.IsFailed)
             return Result.Fail(result.Errors);
 
@@ -276,6 +268,19 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     }
 
 
+    /// <inheritdoc cref="GetBy_SAMAccount(string, ADSPath, SearchScope)"/>
+    /// <param name="samAccount"></param>
+    /// <param name="startingOu"></param>
+    /// <param name="searchScope"></param>
+    /// <returns></returns>
+    public Result<ADpUser> GetBy_SAMAccount(string samAccount,
+                                            ADpOrgUnit startingOu,
+                                            SearchScope searchScope = SearchScope.Subtree)
+    {
+        return GetBy_SAMAccount(samAccount, startingOu.Path, searchScope);
+    }
+
+
     /// <summary>
     /// Retrieves a user by their SAM Account name.  This is a unique attribute, so it should only return one user.  If multiple users are found, an error will be returned.
     /// </summary>
@@ -284,8 +289,8 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     /// <param name="searchScope"></param>
     /// <returns></returns>
     public Result<ADpUser> GetBy_SAMAccount(string samAccount,
-                                     ADSPath startingSearchPath,
-                                     SearchScope searchScope = SearchScope.Subtree)
+                                            ADSPath startingSearchPath,
+                                            SearchScope searchScope = SearchScope.Subtree)
     {
         Result<List<ADpUser>> result = FindByAttribute(startingSearchPath.Path,
                                                        ADpCommon.ATN_SAM,
@@ -305,6 +310,19 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     }
 
 
+    /// <inheritdoc cref="GetBy_Attribute(string, string, ADSPath, SearchScope)"/>
+    public Result<List<ADpUser>> GetBy_Attribute(string attributeName,
+                                                 string attributeValue,
+                                                 ADpOrgUnit startingOu,
+                                                 SearchScope searchScope = SearchScope.Subtree)
+    {
+        return GetBy_Attribute(attributeName,
+                               attributeValue,
+                               startingOu.Path,
+                               searchScope);
+    }
+
+
     /// <summary>
     /// Retrieves a user by any attribute.  This performs an is equal search to the attribute
     /// </summary>
@@ -315,15 +333,14 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     /// <returns></returns>
     public Result<List<ADpUser>> GetBy_Attribute(string attributeName,
                                                  string attributeValue,
-                                            ADSPath startingSearchPath,
-                                            SearchScope searchScope = SearchScope.Subtree)
+                                                 ADSPath startingSearchPath,
+                                                 SearchScope searchScope = SearchScope.Subtree)
     {
         return FindByAttribute(startingSearchPath.Path,
-                                                       attributeName,
-                                                       attributeValue,
-                                                       searchScope);
+                               attributeName,
+                               attributeValue,
+                               searchScope);
     }
-
 
 
     /// <summary>
@@ -333,13 +350,21 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     /// <returns></returns>
     public Result GetMemberOfs(ADpUser user)
     {
-        Result<HashSet<string>> result = AD_RangeRetrieval(user.DistinguishedName, "memberOf", GroupsRetrievedPerRequest);
+        return user.MemberOfGroups.GetMembersFromActiveDirectory(user.DistinguishedName, _ldapConnection);
+/*        Result<HashSet<string>> result = AD_RangeRetrieval(user.DistinguishedName, "memberOf", GroupsRetrievedPerRequest);
         if (result.IsFailed)
             return Result.Fail(result.Errors);
 
-        user.MemberOfGroups = result.Value;
+        user.MemberOfGroups = new MultiValuedDNAttribute("memberOf", false, true);
+        foreach (var member in result.Value)
+        {
+            user.MemberOfGroups.AddMember(member);
+        }
         return Result.Ok();
     }
+*/
+    }
+    
+    
 
 }
-
