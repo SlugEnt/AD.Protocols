@@ -1,14 +1,9 @@
-﻿using FluentResults.Reasons;
+﻿using AD.Protocols.ADObjects;
+using AD.Protocols.ADObjects.Processors;
 using Microsoft.Extensions.Logging;
 using SlugEnt.FluentResults;
 using System.DirectoryServices.Protocols;
 using System.Net;
-using AD.Protocols;
-using AD.Protocols.ADObjects;
-using AD.Protocols.ADObjects.Processors;
-using SlugEnt.AD.Protocols.Attributes;
-
-using SearchOption = System.DirectoryServices.Protocols.SearchOption;
 
 namespace SlugEnt.AD.Protocols;
 
@@ -42,9 +37,8 @@ public class ActiveDirectoryConnector : EngineBase
     ///     If blank the top of the directory is root, otherwise, it must be
     ///     a proper OU Path, IE OU=xyz,OU=abc
     /// </param>
-    public ActiveDirectoryConnector( //   IActiveDirConfig activeDirConfig,
-                        ILogger<ActiveDirectoryConnector> logger,
-                        string rootOU = "") : base(logger) 
+    public ActiveDirectoryConnector(ILogger<ActiveDirectoryConnector> logger,
+                                    string rootOU = "") : base(logger) 
     {
     }
 
@@ -190,96 +184,11 @@ public class ActiveDirectoryConnector : EngineBase
 
 
 
-
-    /// <summary>
-    ///     Searches the directory for the specified entries
-    /// </summary>
-    /// <param name="searchContainerDn">Distinguished name from which to start the search from</param>
-    /// <param name="searchFilter">LDAP Syntax search filter</param>
-    /// <param name="searchScope">LDAP Syntax search scope</param>
-    /// <param name="attributeList">List of attributes to bring back</param>
-    /// <returns>Result Success or Failure (along with error message)</returns>
-    public Result<List<SearchResponse>> SearchDirectory(string searchContainerDn,
-                                                        string searchFilter,
-                                                        SearchScope searchScope,
-                                                        params string[] attributeList)
-    {
-        List<SearchResponse> result              = new();
-        SearchResponse?      response            = null;
-        int                  maxResultsToRequest = 200;
-
-        try
-        {
-            PageResultRequestControl pageRequestControl = new(maxResultsToRequest);
-
-            // used to retrieve the cookie to send for the subsequent request
-            PageResultResponseControl pageResponseControl;
-            SearchRequest searchRequest = new(searchContainerDn,
-                                              searchFilter,
-                                              searchScope,
-                                              attributeList);
-            searchRequest.Controls.Add(pageRequestControl);
-
-            while (true)
-            {
-                response = (SearchResponse)LdapConnection.SendRequest(searchRequest);
-                result.Add(response);
-                pageResponseControl = (PageResultResponseControl)response.Controls[0];
-                if (pageResponseControl.Cookie.Length == 0)
-                {
-                    break;
-                }
-
-                pageRequestControl.Cookie = pageResponseControl.Cookie;
-            }
-        }
-        catch (Exception e)
-        {
-            if (e.Message.Contains("The object does not exist"))
-            {
-                return Result.Fail(new ExceptionalError("The starting container does not exist - " + searchContainerDn, e));
-            }
-
-            // TODO Log the error
-            /*            Console.WriteLine("\nUnexpected exception occured:\n\t{0}: {1}",
-                                          e.GetType().Name,
-                                          e.Message);*/
-            return Result.Fail(new ExceptionalError($"SearchDirectory: [ {searchContainerDn} ]  Had Error. {e.Message}" , e));
-        }
-
-        return Result.Ok(result);
-    }
-
-
-
-
-    /// <summary>
-    /// Returns a list of Password Policies that match the given name prefix.  This is the preferred method to find Password Policy Lists
-    /// </summary>
-    /// <param name="namePrefix"></param>
-    /// <param name="searchScope"></param>
-    /// <returns></returns>
-    public Result<List<ADpReadOnlyPasswordPolicy>> PasswordPolicyFindOneOrMore(string namePrefix,
-                                                       SearchScope searchScope = SearchScope.Subtree)
-    {
-        List<string> attributesToReturn = new();
-        ADpReadOnlyPasswordPolicy.AddBaseAttributes(attributesToReturn);
-
-        string searchFilter      = "(&(objectClass=msDS-PasswordSettings)(cn=" + namePrefix + "*))";
-        //string searchContainerDn = GetPasswordPolicyOU().Path;
-        string searchContainerDn = "dummy";
-        return PasswordPolicyFindOneOrMore(searchFilter, searchScope);
-    }
-
-
-
-
-
     /// <summary>
     /// Returns a new OrgUnitProcessor to manage Organization Units in Active Directory.  This is the preferred way to manage OUs.
     /// </summary>
     /// <returns></returns>
-    public ADpOrgUnitProcessor OrgUnitProcessor()
+    public ADpOrgUnitProcessor GetOrgUnitProcessor()
     {
         return new ADpOrgUnitProcessor(LdapConnection);
     }
@@ -292,15 +201,21 @@ public class ActiveDirectoryConnector : EngineBase
     /// <param name="addGroupDefaultRetrievalAttributes">If true, the set of attributes which this library considers the default set of attributes to retrieve from AD for each group object
     /// are set.  If you wish to completely customize this list, you can set this to false OR after processor creation, clear the list and set your own.</param>
     /// <returns></returns>
-    public ADpGroupProcessor GroupProcessor(bool addGroupDefaultRetrievalAttributes = true) { return new ADpGroupProcessor(LdapConnection,addGroupDefaultRetrievalAttributes); }
+    public ADpGroupProcessor GetGroupProcessor(bool addGroupDefaultRetrievalAttributes = true) { return new ADpGroupProcessor(LdapConnection,addGroupDefaultRetrievalAttributes); }
 
 
     /// <summary>
     /// Returns a new User Processor to manage Users in Active Directory.  This is the preferred way to manage Users.
     /// </summary>
     /// <returns></returns>
-    public ADpUserProcessor UserProcessor()
+    public ADpUserProcessor GetUserProcessor()
     {
         return new ADpUserProcessor(LdapConnection);
+    }
+
+
+    public ADpPasswordPolicyProcessor GetPasswordPolicyProcessor()
+    {
+        return new ADpPasswordPolicyProcessor(LdapConnection, DomainRoot);
     }
 }

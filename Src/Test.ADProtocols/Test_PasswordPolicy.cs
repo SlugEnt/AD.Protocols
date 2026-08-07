@@ -34,7 +34,7 @@ public class Test_PasswordPolicy
     {
         //asi = Ad_SupportInitializer.GetInitializer();
         //asi.Initialize();
-        _pwdProcessor = new ADpPasswordPolicyProcessor(asi.ADConnector.LdapConnection,PolicyRoot);
+        _pwdProcessor = asi.ADConnector.GetPasswordPolicyProcessor();
     }
 
 
@@ -233,7 +233,7 @@ public class Test_PasswordPolicy
     {
         // A --> Setup a new policy and add it to the AD
         ADpPasswordPolicy newPolicy     = Policy_CreateTestPolicy("UserAssign");
-        ADpUserProcessor  userProcessor = asi.ADConnector.UserProcessor();
+        ADpUserProcessor  userProcessor = asi.ADConnector.GetUserProcessor();
         
         Console.WriteLine($"New Policy --> {newPolicy}");
         _pwdProcessor.Delete(newPolicy);
@@ -266,7 +266,7 @@ public class Test_PasswordPolicy
         }
         
         // Save Group to AD
-        ADpGroupProcessor groupProcessor = asi.ADConnector.GroupProcessor();
+        ADpGroupProcessor groupProcessor = asi.ADConnector.GetGroupProcessor();
         Result groupAddResult = groupProcessor.AddNew(group);
         Assert.That(groupAddResult.IsSuccess, Is.True, $"[C_110] Failed to add group {group.DistinguishedName} to Active Directory.");
         
@@ -306,7 +306,7 @@ public class Test_PasswordPolicy
         Result deleteGroupResult = groupProcessor.Delete(group);
         Assert.That(deleteGroupResult.IsSuccess, "[F_120] Failed to delete the test group.");
 
-        ADpOrgUnitProcessor orgProcessor   = asi.ADConnector.OrgUnitProcessor();
+        ADpOrgUnitProcessor orgProcessor   = asi.ADConnector.GetOrgUnitProcessor();
         Result              deleteOUResult = orgProcessor.Delete(newOu.DistinguishedName,true);
         Assert.That(deleteOUResult.IsSuccess, "[F_130] Failed to delete the test OU.");
 

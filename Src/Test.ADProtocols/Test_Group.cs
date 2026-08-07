@@ -276,7 +276,7 @@ public class Test_Group
         }
         
         // Delete the OU.
-        ADpOrgUnitProcessor ouProcessor    = asi.ADConnector.OrgUnitProcessor();
+        ADpOrgUnitProcessor ouProcessor    = asi.ADConnector.GetOrgUnitProcessor();
         Result              deleteOuResult = ouProcessor.Delete(newOu);
         Assert.That(deleteOuResult.IsSuccess, Is.True, "[Z_200] Failed to delete OU from AD.");
     }
@@ -330,7 +330,7 @@ public class Test_Group
         // Z -- Cleanup
         Result z = _groupProcessor.Delete(groupA);
         Assert.That(z.IsSuccess, Is.True, "[Z_100] Failed to delete group from AD.");
-        Result deleteOuResult = asi.ADConnector.OrgUnitProcessor().Delete(newOu);
+        Result deleteOuResult = asi.ADConnector.GetOrgUnitProcessor().Delete(newOu);
         Assert.That(deleteOuResult.IsSuccess, Is.True, "[Z_200] Failed to delete OU from AD.");
     }
 
@@ -446,7 +446,7 @@ public class Test_Group
         }
 
         // Delete the OU.
-        ADpOrgUnitProcessor ouProcessor = asi.ADConnector.OrgUnitProcessor();
+        ADpOrgUnitProcessor ouProcessor = asi.ADConnector.GetOrgUnitProcessor();
         Result deleteOuResult = ouProcessor.Delete(newOu);
         Assert.That(deleteOuResult.IsSuccess, Is.True, "[Z_200] Failed to delete OU from AD.");
     }

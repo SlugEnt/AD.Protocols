@@ -351,18 +351,6 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     public Result GetMemberOfs(ADpUser user)
     {
         return user.MemberOfGroups.GetMembersFromActiveDirectory(user.DistinguishedName, _ldapConnection);
-/*        Result<HashSet<string>> result = AD_RangeRetrieval(user.DistinguishedName, "memberOf", GroupsRetrievedPerRequest);
-        if (result.IsFailed)
-            return Result.Fail(result.Errors);
-
-        user.MemberOfGroups = new MultiValuedDNAttribute("memberOf", false, true);
-        foreach (var member in result.Value)
-        {
-            user.MemberOfGroups.AddMember(member);
-        }
-        return Result.Ok();
-    }
-*/
     }
     
     

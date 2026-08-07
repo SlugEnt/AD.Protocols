@@ -670,8 +670,8 @@ public class Test_User
     public void MemberOf()
     {
         // A --> Setup
-        ADpGroupProcessor groupProcessor = asi.ADConnector.GroupProcessor();
-        ADpUserProcessor  userProcessor  = asi.ADConnector.UserProcessor();
+        ADpGroupProcessor groupProcessor = asi.ADConnector.GetGroupProcessor();
+        ADpUserProcessor  userProcessor  = asi.ADConnector.GetUserProcessor();
         userProcessor.GroupsRetrievedPerRequest = 3;
         
         

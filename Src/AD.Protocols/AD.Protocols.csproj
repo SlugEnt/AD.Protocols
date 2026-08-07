@@ -4,6 +4,25 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+	<GenerateDocumentationFile>true</GenerateDocumentationFile>
+	<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+	<PackageId>SlugEnt.$(AssemblyName)</PackageId>
+	<Title>DirectoryServices.Protocols C# Library</Title>
+	<Authors>Scott Herrmann</Authors>
+	<Company>SlugEnt</Company>
+	<Product>SlugEnt.$(AssemblyName)</Product>
+	<Description>Provides objects for more easily working with Active Directory, such as groups, users, Ou's, password policies, etc</Description>
+	<Copyright>2026</Copyright>
+	<PackageProjectUrl>https://github.com/SlugEnt/AD.Protocols</PackageProjectUrl>
+	<PackageReadmeFile>README.md</PackageReadmeFile>
+	<RepositoryUrl>https://github.com/SlugEnt/AD.Protocols</RepositoryUrl>
+	<PackageReleaseNotes>Alpha Release</PackageReleaseNotes>
+	<AssemblyName>SlugEnt.$(MSBuildProjectName)</AssemblyName>
+	<RootNamespace>SlugEnt.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+	<Version>0.7.0.0</Version>
+	<Configurations>Debug;Release;Nuget</Configurations>
+	<PackageLicenseExpression>MIT</PackageLicenseExpression>
+
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,5 +34,11 @@
 	<!-- Add this group to expose internals -->
 	<ItemGroup>
 		<InternalsVisibleTo Include="Test.ADProtocols" />
+	</ItemGroup>
+	<ItemGroup>
+	  <None Include="..\..\README.md">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
 	</ItemGroup>
 </Project>
