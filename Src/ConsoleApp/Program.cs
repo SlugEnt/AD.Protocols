@@ -1,10 +1,8 @@
 ﻿
+using AD.Protocols.ADObjects;
 using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
-using SlugEnt.IS;
 using System.DirectoryServices.Protocols;
-using System.Security.Cryptography;
-using System.Xml.XPath;
 
 
 public class Program
@@ -65,11 +63,11 @@ public class Program
 
 
         // List Groups
-        ADSPath UnitTestRoot = activeDirectoryConnector.DomainRoot.NewChildADSPath("ou=zUnitTesting");
-        ADSPath UnitTestParent = UnitTestRoot.NewChildADSPath("ou=UT");
+        ADSPath UnitTestRoot = activeDirectoryConnector.DomainRoot.CreateChild("ou=zUnitTesting");
+        ADSPath UnitTestParent = UnitTestRoot.CreateChild("ou=UT");
 
         string searchFilter = ActiveDirectoryConnector.SEARCH_FILTER_ALL_GROUPS;
-        List<string> attributes   = [];
+        List<string> attributes   = new List<string>();
         ADpReadOnlyGroup.AddBaseAttributes(attributes);
         ADpReadOnlyGroup.AddInfoAttributes(attributes);
         ADpReadOnlyGroup.AddStatisticAttributes(attributes);
@@ -77,19 +75,21 @@ public class Program
 
         
         ADSPath grp = UnitTestParent;
-        Result<List<ADpReadOnlyGroup>> resultF = activeDirectoryConnector.GroupFindOneOrMore("OU=UT_Groups,DC=ycy4y,DC=local",
-                                                                                    SearchScope.OneLevel,
-                                                                                    searchFilter,
-                                                                                    attributes);
-        if (resultF.IsSuccess)
-        {
-            List<ADpReadOnlyGroup> groups = resultF.Value;
-            foreach (var group in groups)
-            {
-                Console.WriteLine(group.Name);
-            }
-        }
-        else 
-            Console.WriteLine(resultF.ToStringErrorOnly());
+        /*        Result<List<ADpReadOnlyGroup>> resultF = activeDirectoryConnector.GroupFindOneOrMore("OU=UT_Groups,DC=ycy4y,DC=local",
+                                                                                            SearchScope.OneLevel,
+                                                                                            searchFilter,
+                                                                                            attributes);
+                if (resultF.IsSuccess)
+                {
+                    List<ADpReadOnlyGroup> groups = resultF.Value;
+                    foreach (var group in groups)
+                    {
+                        Console.WriteLine(group.Name);
+                    }
+                }
+                else 
+                    Console.WriteLine(resultF.ToStringErrorOnly());
+        */
     }
+
 }

@@ -34,8 +34,7 @@ public static class ADFunctions
         {
             temp = temp[..^3];
         }
-
-
+        
         DateTimeOffset d1 = DateTime.ParseExact(temp, "yyyyMMddHHmmss", CultureInfo.InvariantCulture);
         return d1;
     }

@@ -64,12 +64,6 @@ public abstract class AttributeBase
 
 
 
-
-
-
-
-
-
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 
@@ -238,6 +232,19 @@ public class AttrDepartment : AttributeStringSingle
 
 
 /// <summary>
+///     The Office the User is in
+/// </summary>
+public class AttrOffice : AttributeStringSingle
+{
+    public AttrOffice(string value,
+                          EnumAttributeOperation changeMode = EnumAttributeOperation.Add) : base("physicalDeliveryOfficeName", changeMode)
+    {
+        DirectoryAttribute.Add(value);
+    }
+}
+
+
+/// <summary>
 ///     The Users Primary Work Number
 /// </summary>
 public class AttrWorkPhone : AttributeStringSingle
@@ -290,6 +297,20 @@ public class AttrUserAccountControl : AttributeInt
 }
 
 
+
+/// <summary>
+///     user Account Control which is actually an integer with each bit a separete indicator.
+/// </summary>
+public class AttrMsDsUserAccountControl : AttributeInt
+{
+    public AttrMsDsUserAccountControl(int value,
+                                  EnumAttributeOperation changeMode = EnumAttributeOperation.Add) : base("msDS-User-Account-Control-Computed", changeMode)
+    {
+        DirectoryAttribute.Add(value.ToString());
+    }
+}
+
+
 /// <summary>
 /// The password Attribute
 /// </summary>
@@ -331,6 +352,23 @@ public class AttrName : AttributeStringSingle
                             EnumAttributeOperation changeMode = EnumAttributeOperation.Add) : base("name", changeMode)
     {
         DirectoryAttribute.Add(value);
+    }
+}
+
+
+/// <summary>
+///  The lockouttime attribute.  This can only be set to zero, thus it is defined as an integer - even though technically it is a DateTimeOffset
+/// </summary>
+public class AttrLockOutTime : AttributeInt
+{
+    public AttrLockOutTime(int value,
+                            EnumAttributeOperation changeMode = EnumAttributeOperation.Add) : base("lockoutTime", changeMode) 
+    {
+        if (value != 0)
+        {
+            throw new ArgumentException("LockoutTime can only be set to zero.  Otherwise it is a read-only attribute that is set by the system when the account is locked out.");
+        }
+        DirectoryAttribute.Add(value.ToString());
     }
 }
 

@@ -1,8 +1,19 @@
 <Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Nuget" />
+    <BuildType Name="Release" />
+  </Configurations>
   <Folder Name="/Solution Items/">
+    <File Path="../../Scripts/PublishToNuget.ps1" />
     <File Path="readme.md" />
   </Folder>
-  <Project Path="../ConsoleApp/ConsoleApp.csproj" />
-  <Project Path="../Test.ADProtocols/Test.ADProtocols.csproj" />
+  <Project Path="../ConsoleApp/ConsoleApp.csproj">
+    <Build Solution="Nuget|*" Project="false" />
+  </Project>
+  <Project Path="../Test.ADProtocols/Test.ADProtocols.csproj">
+    <Build Solution="Nuget|*" Project="false" />
+    <Build Solution="Release|*" Project="false" />
+  </Project>
   <Project Path="AD.Protocols.csproj" />
 </Solution>

@@ -1,6 +1,7 @@
-﻿using SlugEnt.AD.Protocols;
+﻿using AD.Protocols.ADObjects;
+using SlugEnt.AD.Protocols;
 using SlugEnt.FluentResults;
-using SlugEnt.IS;
+ 
 
 namespace UT.SupportObjects;
 
@@ -10,9 +11,9 @@ namespace UT.SupportObjects;
 /// </summary>
 public static class HelperMethods
 {
-    public const string UTBASE    = "UT";
-    public const string OU_UTBASE = "ou=" + UTBASE;
-    public const string TESTBASE = "ou=zUnitTesting";
+    public const string UNIT_TEST_ROOT_OU = "ou=zUnitTesting";
+    public const string UT_BASEOU_NAME    = "UT";
+    public const string OU_UTBASE         = "ou=" + UT_BASEOU_NAME;
     public const string UTGROUP = "UT_Groups";
     public const string OU_UTGROUP = "ou=" + UTGROUP;
 
@@ -24,8 +25,8 @@ public static class HelperMethods
     /// <returns></returns>
     public static ADSPath GetUT_BasePath(ADSPath domainRootPath)
     {
-        ADSPath path = domainRootPath.NewChildADSPath(TESTBASE);
-        ADSPath ut = path.NewChildADSPath(OU_UTBASE);
+        ADSPath path = domainRootPath.CreateChild(UNIT_TEST_ROOT_OU);
+        ADSPath ut = path.CreateChild(OU_UTBASE);
         return ut;
         //return domainRootPath.NewChildADSPath(OU_UTBASE);
     }
@@ -38,7 +39,7 @@ public static class HelperMethods
     /// <returns></returns>
     public static ADSPath GetUT_GroupBasePath(ADSPath domainRootPath)
     {
-        return domainRootPath.NewChildADSPath(OU_UTGROUP);
+        return domainRootPath.CreateChild(OU_UTGROUP);
     }
 
 

@@ -14,7 +14,7 @@ namespace SlugEnt.AD.Protocols.Attributes;
 public class AttributeTimeSpan : AttributeBase
 {
     /// <summary>
-    /// Construts an Integer Attribute
+    /// Constructs an Integer Attribute
     /// </summary>
     /// <param name="name">Attribute name</param>
     /// <param name="changeMode">Operation to be performed</param>
