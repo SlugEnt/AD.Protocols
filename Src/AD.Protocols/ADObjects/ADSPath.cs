@@ -71,7 +71,6 @@ public class ADSPath
     public ADSPath(string path,
                    bool speedOverStorage = false)
     {
-
         Result<ADpValidatedRdnPath> result = ADpValidatedRdnPath.IsValidDn(path, false);
         if (result.IsFailed)
             throw new ArgumentException("Invalid Distinguished Name.  Cannot create ADSPath object from this path.", nameof(path));
@@ -81,6 +80,23 @@ public class ADSPath
     }
 
 
+    /// <summary>
+    /// Construct an ADSPath object from a validated RDN path.
+    /// </summary>
+    /// <param name="rdnPath"></param>
+    /// <param name="speedOverStorage"></param>
+    /// <exception cref="ArgumentException"></exception>
+    public ADSPath(ADpValidatedRdnPath rdnPath,
+                   bool speedOverStorage = false)
+    {
+        if (rdnPath == null || !rdnPath.IsValid)
+            throw new ArgumentException("Invalid RDN path provided.", nameof(rdnPath));
+        if (rdnPath.HasBeenAssigned)
+            throw new ArgumentException("RDN path has already been assigned.  ADpValidateRdnPath objects can only be assigned once.", nameof(rdnPath));
+        
+        RdnComponents = rdnPath.AssignRdnComponentList();
+        SpeedOverStorage = speedOverStorage;
+    }
 
     /// <summary>
     /// Constructs an ADSPath object from a list of RDN components.  This constructor is for internal use only as it does not validate the components.
@@ -111,12 +127,28 @@ public class ADSPath
     internal List<KeyValuePair<string,string>> RdnComponents { get; } = new List<KeyValuePair<string,string>>();
 
 
+    /// <summary>
+    /// Creates a new ADSPath that is a child of the current object, by appending the child path to the front of the current objects Path.
+    /// </summary>
+    /// <param name="childPath"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    public ADSPath CreateChild(ADSPath childPath)
+    {
+        if (childPath == null)
+            throw new ArgumentNullException(nameof(childPath));
+        ADSPath newParent = new ADSPath();
+        newParent.CopyRdnComponents(this);
+        newParent.Merge(childPath);
+        return newParent;
+    }
+
     
     /// <summary>
     /// Creates a new ADSPath by appending the child path to the front of the current objects Path.
     /// </summary>
     /// <param name="childPath"></param>
-    /// <returns></returns>
+    /// <returns>The new ADSPath with the child path prefixed to the path.</returns>
     /// <exception cref="ArgumentException"></exception>
     public ADSPath CreateChild(string childPath)
     {
@@ -224,26 +256,26 @@ public class ADSPath
     /// <summary>
     ///     Returns the full ADSPath of the parent of this Path
     /// </summary>
-    /// <returns></returns>
+    /// <returns>The path of the parent OR Result.Failure with ReasonCode = NotSpecified if the parent path is not present.</returns>
     public Result<ADSPath> GetParent()
     {
         // The parent is the RDNComponents list minus the first RDN component.  So we can just create a new ADSPath object with the remaining components.
         if (RdnComponents.Count <= 1)
-            return Result.Fail("This ADSPath has no parent.");
+            return Result.Fail("This ADSPath has no parent.",EnumReasonCode.NotSpecified);
         
         ADSPath parent = new(RdnComponents.GetRange(1, RdnComponents.Count - 1), SpeedOverStorage);
         return Result.Ok(parent);
     }
 
-    
+
     /// <summary>
-    ///     Returns the name portion only of the left most RDN. So in OU=Tampa,OU=Florida,dc=some,dc=local, it would return
-    ///     Tampa.
+    ///     Returns the name portion only of the left most RDN. So in OU=Tampa,OU=Florida,dc=some,dc=local, it would return Tampa.
+    /// IF, there is only one RDN component for this path then it will return the value of that RDN component.  If there are no RDN components, it will return an empty string.
     /// </summary>
     /// <returns></returns>
-    public string ShortName()
+    public string Name()
     {
-        if (RdnComponents.Count > 1)
+        if (RdnComponents.Count >= 1)
             return RdnComponents[0].Value;
         
         return string.Empty;
@@ -251,12 +283,12 @@ public class ADSPath
 
     
     /// <summary>
-    /// Returns the ADSPath name which is the left most RDN in the path.  So in OU=Tampa,OU=Florida,dc=some,dc=local, it would return OU=Tampa.
+    /// Returns the full RDN name which is the left most RDN in the path.  So in OU=Tampa,OU=Florida,dc=some,dc=local, it would return OU=Tampa.
     /// </summary>
     /// <returns></returns>
-    public string Name()
+    public string NameRDN()
     {
-        if (RdnComponents.Count > 1)
+        if (RdnComponents.Count >= 1)
             return $"{RdnComponents[0].Key}={RdnComponents[0].Value}";
 
         return string.Empty;

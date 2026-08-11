@@ -2,12 +2,30 @@
 using SlugEnt.FluentResults;
 
 namespace AD.Protocols.ADObjects;
+
+/// <summary>
+/// Clas used to valid an LDAP "Path" or Distinguished Name (DN) and return the individual RDN components if valid.  This is used to validate and parse DN's for AD objects.
+/// <remarks>The RDNComponents list can be assigned to another object.  But only once.</remarks>
+/// </summary>
 public class ADpValidatedRdnPath
 {
+    /// <summary>
+    /// Returns true if the RDN path is valid.  If false, the RDN path is invalid and the RdnComponents list will be empty.
+    /// </summary>
     public bool IsValid { get; private set; }
 
+
+    /// <summary>
+    /// Returns true if the RDN component list has been assigned to a caller.  Once assigned, the internal list is cleared and cannot be accessed again.
+    /// </summary>
     public bool HasBeenAssigned { get; private set; } = false;
 
+    
+    /// <summary>
+    /// Assigns the RDN component list to the caller.  It can only be assigned once.  Once assigned the internal list is cleared and cannot be accessed again.
+    /// </summary>
+    /// <returns>The list of RDN components.</returns>
+    /// <exception cref="ApplicationException">Thrown if the RDN component list has already been assigned.</exception>
     public List<KeyValuePair<string, string>> AssignRdnComponentList ()
     {
         if (HasBeenAssigned)
@@ -20,11 +38,19 @@ public class ADpValidatedRdnPath
         return temp;
     }
 
+
+    /// <summary>
+    /// The list of RDN components that make up the validated DN.  This is a list of key-value pairs where the key is the RDN type (e.g., CN, OU, DC) and the value is the corresponding value for that RDN.
+    /// </summary>
     private List<KeyValuePair<string,string>> RdnComponents { get; set; } = new List<KeyValuePair<string, string>>();
 
     
+    /// <summary>
+    /// Empty Constructor.
+    /// </summary>
     private ADpValidatedRdnPath () {}
 
+    
     /// <summary>
     /// Determines if the passed string is a valid Distinguished Name (DN) and returns the individual RDN components if valid.
     /// </summary>

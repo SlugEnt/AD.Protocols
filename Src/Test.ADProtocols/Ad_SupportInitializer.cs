@@ -89,14 +89,6 @@ public class Ad_SupportInitializer
     /// </summary>
     public ADSPath UnitTestRoot { get; private set; }
 
-    /*
-    public Result<ADpReadOnlyOrgUnit> CreateRandomOuReturnReadOnlyOu(ADpReadOnlyOrgUnit parentOrgUnit)
-    {
-        Result addResult;
-        string parentPath = parentOrgUnit != null ? parentOrgUnit.
-        if (parentOrgUnit == null)
-    }  
-    */
 
     /// <summary>
     ///     Helper Function to create a random OU from the parent path

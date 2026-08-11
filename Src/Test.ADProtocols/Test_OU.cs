@@ -198,5 +198,48 @@ public class Test_OU
         Assert.That(result.Value.WasReadFromActiveDirectory, Is.True, "[V_120]  WasReadFromActiveDirectory property should have been set to True");
     }
 
+    [TestCase(true)]
+    [TestCase(false)]
+    [Test]
+    public void Confirm_VariantA(bool alreadyExisting)
+    {
+        // Setup
+        ADpOrgUnit ou;
+        if (alreadyExisting)
+        {
+            ou = asi.CreateRandomOuNew(asi.UnitTestParent);
+            Result<ADpOrgUnit> result = _ouProcessor.ConfirmOrgUnit(ou.Name, asi.UnitTestParent);
+            Assert.That(result.IsSuccess,Is.True,"[B_100]  Failed to confirm the OU exists using name and parent path string");
+
+            ADSPath parentPath = new ADSPath(asi.UnitTestParent);
+            result = _ouProcessor.ConfirmOrgUnit(ou.Name, parentPath);
+            Assert.That(result.IsSuccess, Is.True, "[B_110]  Failed to confirm the OU exists using name and parent path ADSPath object");
+
+            ADpOrgUnit parentOu = new ADpOrgUnit(asi.UnitTestParent.Path);
+            result = _ouProcessor.ConfirmOrgUnit(ou.Name, parentOu);
+            Assert.That(result.IsSuccess, Is.True, "[B_120]  Failed to confirm the OU exists using name and parent ADpOrgUnit object");
+        }
+        else
+        {
+            string ouName = asi.Faker.Random.String2(6);
+            Result<ADpOrgUnit> result = _ouProcessor.ConfirmOrgUnit(ouName, asi.UnitTestParent);
+            Assert.That(result.IsSuccess, Is.True, "[C_100]  Failed to confirm the OU exists using name and parent path string");
+            Assert.That(result.Value.Name,Is.EqualTo(ouName),$"[C_110]  The OU name does not match the expected value");
+
+            ouName = asi.Faker.Random.String2(6);
+            ADSPath parentPath = new ADSPath(asi.UnitTestParent);
+            result = _ouProcessor.ConfirmOrgUnit(ouName, parentPath);
+            Assert.That(result.IsSuccess, Is.True, "[C_120]  Failed to confirm the OU exists using name and parent path ADSPath object");
+            Assert.That(result.Value.Name, Is.EqualTo(ouName), $"[C_130]  The OU name does not match the expected value");
+
+            ouName = asi.Faker.Random.String2(6);
+            ADpOrgUnit parentOu = new ADpOrgUnit(asi.UnitTestParent.Path);
+            result = _ouProcessor.ConfirmOrgUnit(ouName, parentOu);
+            Assert.That(result.IsSuccess, Is.True, "[C_140]  Failed to confirm the OU exists using name and parent ADpOrgUnit object");
+            Assert.That(result.Value.Name, Is.EqualTo(ouName), $"[C_150]  The OU name does not match the expected value");
+
+        }
+
+    }
 }
 

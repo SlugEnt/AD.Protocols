@@ -1,4 +1,5 @@
-﻿using AD.Protocols;
+﻿using System.Security.Cryptography;
+using AD.Protocols;
 using AD.Protocols.ADObjects;
 using Microsoft.Identity.Client;
 using SlugEnt.FluentResults;
@@ -109,12 +110,17 @@ public class Test_ADSPath
     }
 
 
-    [TestCase("CN=slug,OU=animals,DC=some,DC=local", "OU=animals,DC=some,DC=local")]
-    [TestCase("cn=scott,ou=people,dc=some,dc=local", "OU=people,DC=some,DC=local")]
-    [TestCase("cn=mary,ou=people,ou=us,ou=California,ou=San Diego,dc=some,dc=local", "OU=people,OU=us,OU=California,OU=San Diego,DC=some,DC=local")]
+    /// <summary>
+    /// Validates that the GetParent method correctly retrieves the parent ADSPath for a given path, and that the resulting parent path matches the expected value.
+    /// </summary>
+    /// <param name="path"></param>
+    /// <param name="expected"></param>
+    [TestCase("CN=slug,OU=animals,DC=some,DC=local", "OU=animals,DC=some,DC=local", "slug")]
+    [TestCase("cn=scott,ou=people,dc=some,dc=local", "OU=people,DC=some,DC=local","scott")]
+    [TestCase("cn=mary,ou=people,ou=us,ou=California,ou=San Diego,dc=some,dc=local", "OU=people,OU=us,OU=California,OU=San Diego,DC=some,DC=local","mary")]
     [Test]
     public void GetParentADSPath(string path,
-                                 string expected)
+                                 string expected, string expName)
     {
         ADSPath         adsPath    = new(path);
         Result<ADSPath> testResult = adsPath.GetParent();
@@ -122,9 +128,26 @@ public class Test_ADSPath
         ADSPath parent = testResult.IsSuccess ? testResult.Value : null;
 
         Assert.AreEqual(expected, parent.Path, "[V_100]");
+        Assert.AreEqual(expName, adsPath.Name(), "[V_110]");
     }
 
 
+
+    /// <summary>
+    /// Validates that a path that only contains a single component (i.e., has no parent) returns a failure when attempting to retrieve its parent.
+    /// </summary>
+    [Test]
+    public void GetParent_NoParentPath()
+    {
+        string path = "ou=noPath";
+        ADSPath adsPath = new(path);
+
+        Result<ADSPath> testResult = adsPath.GetParent();
+        Assert.That(testResult.IsFailed,Is.True,"[V_100] Expected failure when getting parent of a path with no parent.");
+        Assert.That(testResult.ReasonCode, Is.EqualTo(EnumReasonCode.NotSpecified), "[V_110] ReasonCode is not as expected.");
+    }
+    
+    
 
     [TestCase("DC=some,DC=local", "OU=animals", "OU=animals,DC=some,DC=local")]
     [Test]
@@ -150,7 +173,7 @@ public class Test_ADSPath
                           string expected)
     {
         ADSPath adsPath = new(path);
-        Assert.AreEqual(expected, adsPath.ShortName(), "[V_100]");
+        Assert.AreEqual(expected, adsPath.Name(), "[V_100]");
     }
 
 
@@ -161,7 +184,7 @@ public class Test_ADSPath
                      string expected)
     {
         ADSPath adsPath = new(path);
-        Assert.AreEqual(expected, adsPath.Name(), "[V_100]");
+        Assert.AreEqual(expected, adsPath.NameRDN(), "[V_100]");
     }
 
 
@@ -218,9 +241,24 @@ public class Test_ADSPath
     }
 
 
+
+
     [TestCase("DC=some,DC=local", "OU=animals", "OU=animals,DC=some,DC=local")]
     [Test]
-    public void Merge(string parent,
+    public void MergeADSPathObjects(string parent,
+                      string child,
+                      string expected)
+    {
+        ADSPath parentPath = new(parent);
+        ADSPath childPath  = new(child);
+        ADSPath newPath    = parentPath.CreateChild(childPath);
+        Assert.AreEqual(expected, newPath.Path, "[V_100]");
+        Assert.AreEqual(parent, parentPath.Path, "[V_110]");
+    }
+
+    [TestCase("DC=some,DC=local", "OU=animals", "OU=animals,DC=some,DC=local")]
+    [Test]
+    public void MergePathStrings(string parent,
                       string child,
                       string expected)
     {
@@ -228,6 +266,49 @@ public class Test_ADSPath
         ADSPath newPath    = parentPath.CreateChild(child);
         Assert.AreEqual(expected, newPath.Path, "[V_100]");
         Assert.AreEqual(parent, parentPath.Path, "[V_110]");
+    }
 
+
+    /// <summary>
+    /// Validates that an ADSPath can be constructed from an ADpValidatedRdnPath, and that the resulting ADSPath matches the original path.
+    /// </summary>
+    [Test]
+    public void Construct_From_ADpValidRdnPath()
+    {
+        // A --> Setup
+        string  origPath = "CN=slug,OU=animals,DC=some,DC=local";
+        ADSPath adsSlug  = new(origPath);
+
+        // B --> Act
+        Result<ADpValidatedRdnPath> result = ADpValidatedRdnPath.IsValidDn(adsSlug.Path, false);
+        Assert.That(result.IsSuccess, "[V_100] ADpValidatedRdnPath assignment failed.");
+
+        ADpValidatedRdnPath rdnPath = result.Value;
+        ADSPath             adsCopy = new ADSPath(rdnPath);
+
+        // V --> Verify
+        Assert.That(adsCopy, Is.EqualTo(adsSlug), "[V_100] ADSPath copy is not equal to the original.");
+    }
+
+
+    /// <summary>
+    /// Validates that an ADSPath can be constructed from an ADpValidatedRdnPath by assigning the RDN component list, and that the resulting ADSPath matches the original path.
+    /// </summary>
+    [Test]
+    public void Construct_From_RDNComponentList()
+    {
+        // A --> Setup
+        string  origPath = "CN=slug,OU=animals,DC=some,DC=local";
+        ADSPath adsSlug  = new(origPath);
+
+        // B --> Act
+        Result<ADpValidatedRdnPath> result = ADpValidatedRdnPath.IsValidDn(adsSlug.Path, false);
+        Assert.That(result.IsSuccess, "[V_100] ADpValidatedRdnPath assignment failed.");
+
+        ADpValidatedRdnPath rdnPath = result.Value;
+        ADSPath             adsCopy = new ADSPath(rdnPath.AssignRdnComponentList());
+
+        // V --> Verify
+        Assert.That(adsCopy, Is.EqualTo(adsSlug), "[V_100] ADSPath copy is not equal to the original.");
     }
 }

@@ -1,6 +1,7 @@
 ﻿using SlugEnt.AD.Protocols;
 
 using System.DirectoryServices.Protocols;
+using SlugEnt.FluentResults;
 
 namespace AD.Protocols.ADObjects;
 
@@ -9,6 +10,9 @@ namespace AD.Protocols.ADObjects;
 /// </summary>
 public class ADpOrgUnit : ADpBaseObject
 {
+    // These are characters that will help to identify if a string is a distinguished name or not.  If the string contains any of these characters it is likely a DN.
+    private static char[] _commonChars = new char[] { ',', '='};
+    
     /// <summary>
     /// Creates a new organizational unit with the given name. You can override CommonName, DisplayName by
     /// setting the respective properties.
@@ -29,6 +33,8 @@ public class ADpOrgUnit : ADpBaseObject
         CommonName    = ouName;
 
         IsNew          = true;
+        
+        BuildDistinguishedName();
         InCreationMode = false;
     }
 
@@ -60,16 +66,40 @@ public class ADpOrgUnit : ADpBaseObject
 
         InCreationMode = false;
     }
-    
-    
-    /// <summary>
-    /// Starts the process of creating a new OU.
-    /// </summary>
-    /// <param name="ouName"></param>
-    public ADpOrgUnit (string ouName ) : base(ouName)
-    {}
 
+
+    /// <summary>
+    /// Starts the process of creating a new OU. 
+    /// </summary>
+    /// <param name="ouName">Can either be just the name of the OU or a distinguished name (DN).</param>
+    public ADpOrgUnit(string ouName) : base(ouName)
+    {
+        InCreationMode = true;
+        bool likelyDN = ouName.IndexOfAny(_commonChars) >= 0;
+        if (likelyDN)
+        {
+            Result<ADpValidatedRdnPath> result = ADpValidatedRdnPath.IsValidDn(ouName, false).Value;
+            if (result.IsFailed)
+                throw new ArgumentException($"the ouName provided contained Distinguished Name like characters, but was invalid: {ouName}", "ouName");
+
+            // Create an ADSPath object from the validated DN and set the parent path and name accordingly.
+            ADSPath         path       = new ADSPath(result.Value);
+            Result<ADSPath> pathResult = path.GetParent();
+
+            if (pathResult.IsSuccess)
+                ParentPath = pathResult.Value;
+            Name = path.Name();
+            BuildDistinguishedName();
+            return;
+        }
+
+        // Appears to just be a name, not a DN.  Set the name and let the user set the parent path.
+        Name           = ouName;
+        InCreationMode = false;
+    }
     
+
+
     /// <summary>
     /// The object class of this Object.
     /// </summary>

@@ -44,6 +44,80 @@ public class ADpOrgUnitProcessor : ADpGenericProcessor<ADpOrgUnit>
     }
 
     
+    /// <summary>
+    /// Retrieves a list of OU's under the parent DN. Does not recurse.
+    /// </summary>
+    /// <param name="parentDn"></param>
+    /// <returns></returns>
+    public Result<List<ADpOrgUnit>> GetAllChildOrgUnits(string parentDn) { return GetAllChildOrgUnits(new ADSPath(parentDn)); }
+
+    
+    
+    
+    /// <inheritdoc cref="ConfirmOrgUnit(string, string)"/>
+    public Result<ADpOrgUnit> ConfirmOrgUnit(string ouName, ADpOrgUnit parentOu)
+    {
+        return ConfirmOrgUnit(ouName, parentOu.Path);
+    }
+
+
+    /// <inheritdoc cref="ConfirmOrgUnit(string, string)"/>
+    /// <param name="ouName"></param>
+    /// <param name="parentDn"></param>
+    /// <returns></returns>
+    public Result<ADpOrgUnit> ConfirmOrgUnit(string ouName, ADSPath parentDn)
+    {
+        return ConfirmOrgUnit(ouName, parentDn.Path);
+    }
+
+
+    /// <summary>
+    ///   Confirms that the Org Unit exists.  If it does not exist, it will create it.  Either way, it will return the Org Unit object for the OU, unless it encounters an error.
+    /// </summary>
+    /// <param name="ouName"></param>
+    /// <param name="parentPath"></param>
+    /// <returns></returns>
+
+    public Result<ADpOrgUnit> ConfirmOrgUnit(string ouName,
+                                             string parentPath)
+    {
+        string                   searchFilter = $"(&(objectClass={ADpCommon.OBJ_CLASS_ORGUNIT})(ou={ouName}))";
+        Result<List<ADpOrgUnit>> result       = Find(parentPath, SearchScope.OneLevel, searchFilter);
+        bool                     needToCreate = false;
+        
+        if (result.IsFailed)
+        {
+            if (result.ReasonCode != EnumReasonCode.NotFound)
+                return Result.Fail(result.Errors);
+
+            // Create the OU since it was not found.
+            needToCreate = true;
+
+        }
+        else if (result.IsSuccess && result.Value.Count == 0)
+            // Create the OU since it was not found.
+            needToCreate = true;
+        
+        else if (result.Value.Count > 0)
+            return Result.Ok(result.Value[0]);
+        
+        
+        if (needToCreate)
+        {
+            Result<ADpOrgUnit> createResult = AddNew(ouName, parentPath);
+            if (createResult.IsFailed)
+                return Result.Fail(createResult.Errors);
+
+            // We successfully created the OU.  Return it.
+            return Result.Ok(createResult.Value);
+
+        }
+        
+        return Result.Fail($"Arrived at an unexpected point.  OU  '{ouName}' under parent '{parentPath}'");
+
+        
+    }
+
 
     /// <summary>
     /// OU's do not use CN as the name attribute, they use OU.

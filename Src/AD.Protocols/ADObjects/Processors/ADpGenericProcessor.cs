@@ -58,7 +58,7 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
                 return Result.Fail(resultResponse.Errors);
             
             if (resultResponse.Value.Count == 0)
-                return Result.Fail(NOT_FOUND);
+                return Result.Fail(NOT_FOUND,EnumReasonCode.NotFound);
 
             if (resultResponse.Value[0].Entries.Count == 0)
                 return new List<T>();
