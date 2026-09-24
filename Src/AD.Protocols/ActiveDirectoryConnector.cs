@@ -59,7 +59,7 @@ public class ActiveDirectoryConnector : EngineBase
 
         try
         {
-            LdapDirectoryIdentifier directory = new(_activeDirConfig.Server1Name + "." + _activeDirConfig.Domain + $":{_activeDirConfig.Port}");
+            LdapDirectoryIdentifier directory = new($"{_activeDirConfig.Server1FQDN}:{_activeDirConfig.Port}");
 
             LdapConnection = new LdapConnection(directory);
 
@@ -98,7 +98,7 @@ public class ActiveDirectoryConnector : EngineBase
         {
             // Handle LDAP-specific exceptions
             // Log the exception or perform any necessary error handling
-            return Result.Fail(new ExceptionalError($"LDAP exception occurred.  Server Connecting to: {_activeDirConfig.Server1Name}.{_activeDirConfig.Domain}:{_activeDirConfig.Port} | {ex.Message}", ex));
+            return Result.Fail(new ExceptionalError($"LDAP exception occurred.  Server Connecting to: {_activeDirConfig.Server1FQDN}:{_activeDirConfig.Port} | {ex.Message}", ex));
         }
         catch (Exception ex)
         {
@@ -115,7 +115,7 @@ public class ActiveDirectoryConnector : EngineBase
     {
         try
         {
-            LdapDirectoryIdentifier directory = new(_activeDirConfig.Server1Name + "." + _activeDirConfig.Domain + $":{_activeDirConfig.Port}");
+            LdapDirectoryIdentifier directory = new($"{_activeDirConfig.Server1FQDN}:{_activeDirConfig.Port}");
 
             LdapConnection ldapCX = new LdapConnection(directory);
             
@@ -149,7 +149,7 @@ public class ActiveDirectoryConnector : EngineBase
         {
             // Handle LDAP-specific exceptions
             // Log the exception or perform any necessary error handling
-            return Result.Fail(new ExceptionalError($"LDAP exception occurred.  Server Connecting to: {_activeDirConfig.Server1Name}.{_activeDirConfig.Domain}:{_activeDirConfig.Port} | {ex.Message}", ex));
+            return Result.Fail(new ExceptionalError($"LDAP exception occurred.  Server Connecting to: {_activeDirConfig.Server1FQDN}:{_activeDirConfig.Port} | {ex.Message}", ex));
         }
         catch (Exception ex)
         {

@@ -1,9 +1,9 @@
 # Builds the nuget package for the SlugEnt AD.Protocols
 # And Copies it to Local Repository.
-
 $Projects =@(
   'AD.Protocols'
 )
+
 
 $repo = Read-Host "Which Repository to push to:  L = Local,  N = Nuget Public"
 $repo = $repo.ToUpper()

@@ -35,8 +35,8 @@ public class Ad_SupportInitializer
             AdPassword  = "T#sting2026",
             AdUser      = "UTAdmin",
             Domain      = "ycy4y.local",
-            Server1Name = "ycdc1",
-            Server2Name = "",
+            Server1FQDN = "ycdc1.ycy4y.local",
+            Server2FQDN = "",
             Port        = 636,
             RootPath    = "",
             UserOu      = ""

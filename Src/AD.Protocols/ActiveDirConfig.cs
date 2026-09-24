@@ -22,14 +22,14 @@ public class ActiveDirConfig : IActiveDirConfig
     public string Domain { get; set; } = "";
 
     /// <summary>
-    /// First server in the Active Directory domain to connect to
+    /// First server in the Active Directory domain to connect to.  This should be the FQDN of the server, for example "adserver.mycompany.local"
     /// </summary>
-    public string Server1Name { get; set; } = "";
+    public string Server1FQDN { get; set; } = "";
 
     /// <summary>
     /// Second server in the Active Directory domain to connect to
     /// </summary>
-    public string Server2Name { get; set; } = "";
+    public string Server2FQDN { get; set; } = "";
     
     /// <summary>
     /// Port to connect to the Active Directory server

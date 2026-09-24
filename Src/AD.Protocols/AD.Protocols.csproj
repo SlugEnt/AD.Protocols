@@ -19,7 +19,7 @@
 	<PackageReleaseNotes>Alpha Release</PackageReleaseNotes>
 	<AssemblyName>SlugEnt.$(MSBuildProjectName)</AssemblyName>
 	<RootNamespace>SlugEnt.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
-	<Version>0.7.1.0</Version>
+	<Version>0.7.2.0</Version>
 	<Configurations>Debug;Release;Nuget</Configurations>
 	<PackageLicenseExpression>MIT</PackageLicenseExpression>
 	<PublishRepositoryUrl>true</PublishRepositoryUrl>
