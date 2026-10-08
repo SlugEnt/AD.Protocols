@@ -35,7 +35,7 @@ public class ADpUserProcessor : ADpGenericProcessor<ADpUser>
     /// Set Default Attributes to be retrieved if none are defined at time of retrieval from AD
     /// DisplayName, UserPrincipalName, sAMAccountName, GivenName, SN, Description, CN and DistinguishedName
     /// </summary>
-    internal override void AttrRetrieval_Default()
+    public override void AttrRetrieval_Default()
     {
         AttributeRetrieverMgr.AddAttribute("displayName");
         AttributeRetrieverMgr.AddAttribute("userPrincipalName");

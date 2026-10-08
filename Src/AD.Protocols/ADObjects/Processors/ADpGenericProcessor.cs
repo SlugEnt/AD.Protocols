@@ -28,7 +28,7 @@ public abstract class ADpGenericProcessor<T> : ADpBaseProcessor where T : ADpBas
     /// <summary>
     /// Defines the default set of attributes to be retrieved if none are defined at time of retrieval from AD
     /// </summary>
-    internal virtual void AttrRetrieval_Default()
+    public virtual void AttrRetrieval_Default()
     {
         AttrRetrieval_AddCore();
     }

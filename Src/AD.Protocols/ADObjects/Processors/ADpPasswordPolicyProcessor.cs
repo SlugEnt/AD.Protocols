@@ -48,7 +48,7 @@ public class ADpPasswordPolicyProcessor : ADpGenericProcessor<ADpPasswordPolicy>
     /// Set Default Attributes to be retrieved if none are defined at time of retrieval from AD
     /// DisplayName, sAMAccountName, Description, CN and DistinguishedName
     /// </summary>
-    internal override void AttrRetrieval_Default()
+    public override void AttrRetrieval_Default()
     {
         AttributeRetrieverMgr.AddAttribute("displayName");
         AttributeRetrieverMgr.AddAttribute("sAMAccountName");

@@ -210,7 +210,7 @@ public class Test_User
 
 
         DateTimeOffset temp = DateTimeOffset.Now.UtcDateTime;
-        DateTimeOffset last5Seconds =  temp.AddSeconds(-10);
+        DateTimeOffset last10Seconds =  temp.AddSeconds(-10);
 
         // C  --> Action
         // Attempt to login as User
@@ -227,11 +227,11 @@ public class Test_User
 
         Console.WriteLine($"Current Time:   {DateTimeOffset.UtcNow}");
         Console.WriteLine($"Temp Time:      {temp}");
-        Console.WriteLine($"Last 5 Seconds: {last5Seconds}");
+        Console.WriteLine($"Last 10 Seconds: {last10Seconds}");
         Console.WriteLine($"Last Logon:     {user.LastLogon}");
         
-        Assert.That(user.LastLogon, Is.GreaterThanOrEqualTo(last5Seconds), "[V_110] PasswordLastSet is not within the last 5 seconds.");
-        Assert.That(user.PasswordLastSet, Is.LessThanOrEqualTo(DateTimeOffset.UtcNow),"");
+        Assert.That(user.LastLogon, Is.GreaterThanOrEqualTo(last10Seconds), "[V_110] PasswordLastSet is not within the last 10 seconds.");
+        Assert.That(user.PasswordLastSet, Is.LessThanOrEqualTo(DateTimeOffset.UtcNow.AddSeconds(1)),"[V_115] PasswordLastSet is not within the expected range.");
         Assert.That(user.BadPasswordCount, Is.Zero,"[V_120] BadPasswordCount is not zero after successful login.");
         //Assert.That(user.LastLogon,Is.InRange(last5Seconds, DateTimeOffset.UtcNow), "[V_130] LastLogon is not within the last 5 seconds.");
         

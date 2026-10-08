@@ -301,14 +301,18 @@ public class ADpGroup : ADpBaseObject
             throw new ArgumentException("The distinguished name must start with 'CN='.", nameof(userDistinguishedName));
 
         Members.RemoveMember(userDistinguishedName, false);
-
-        // If for some reason we have previously added this user to the NewMembers list, remove them from that list.
-/*        if (NewMembers.Contains(userDistinguishedName))
-            NewMembers.Remove(userDistinguishedName);
-        else
-            RemovedMembers.Add(userDistinguishedName);
     }
-*/
+
+
+    /// <summary>Returns a string that represents the current object.</summary>
+    /// <returns>A string that represents the current object.</returns>
+    public override string ToString()
+    {
+        if (!string.IsNullOrEmpty(DisplayName))
+            return $"{DisplayName} - {DistinguishedName}";
+
+        return DistinguishedName;
+
     }
 }
 

@@ -59,13 +59,22 @@ public class ActiveDirectoryConnector : EngineBase
 
         try
         {
-            LdapDirectoryIdentifier directory = new($"{_activeDirConfig.Server1FQDN}:{_activeDirConfig.Port}");
+            LdapDirectoryIdentifier directory = new($"{_activeDirConfig.Server1FQDN}", _activeDirConfig.Port);
 
             LdapConnection = new LdapConnection(directory);
 
             // Set Credential
-            NetworkCredential credential = new(_activeDirConfig.AdUser, _activeDirConfig.AdPassword);
-            LdapConnection.Credential = credential;
+            NetworkCredential credential;
+            if (_activeDirConfig.AdLoginUserDomain != string.Empty)
+            {
+                credential = new(_activeDirConfig.AdUser, _activeDirConfig.AdPassword, _activeDirConfig.AdLoginUserDomain);
+                LdapConnection.Credential = credential;
+            }
+            else
+            {
+                credential = new(_activeDirConfig.AdUser, _activeDirConfig.AdPassword);
+                LdapConnection.Credential = credential;
+            }
             
             DomainRoot = ADSPath.FromDomainName(_activeDirConfig.Domain);
             if (rootOU != "")

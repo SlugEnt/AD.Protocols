@@ -129,7 +129,7 @@ public class ADpOrgUnitProcessor : ADpGenericProcessor<ADpOrgUnit>
     /// <summary>
     /// Set Default Attributes to be retrieved if none are defined at time of retrieval from AD
     /// </summary>
-    internal override void AttrRetrieval_Default()
+    public override void AttrRetrieval_Default()
     {
         base.AttrRetrieval_Default();
         AttributeRetrieverMgr.AddAttribute("ou");

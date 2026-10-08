@@ -180,8 +180,19 @@ public abstract class ADpBaseObject
     {
         return string.Equals(firstDn, secondDn, StringComparison.CurrentCultureIgnoreCase);
     }
-    
-    
+
+
+
+    /// <summary>Returns a string that represents the current object.</summary>
+    /// <returns>A string that represents the current object.</returns>
+    public override string ToString()
+    {
+        if (!string.IsNullOrEmpty(Name))
+            return $"{Name} - {DistinguishedName}";
+
+        return DistinguishedName;
+    }
+
 
     #region "Retrieval Attributes"
 
@@ -322,6 +333,8 @@ public abstract class ADpBaseObject
     }
 
 
-    #endregion    
+    #endregion
+
+
 }
 

@@ -15,6 +15,13 @@ public class ActiveDirConfig : IActiveDirConfig
     /// </summary>
     public string AdUser { get; set; } = "";
 
+    
+    /// <summary>
+    /// Domain the user is in. This is optional.
+    /// </summary>
+    public string? AdLoginUserDomain { get; set; } = "";
+    
+    
     /// <summary>
     /// Active Directory Domain to connect to.  This is usually the last 2 parts of the domain name.
     /// For example, if the domain is "mycompany.local", this would be "mycompany.local"

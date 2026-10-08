@@ -776,5 +776,25 @@ public class ADpUser : ADpBaseObject
 
         MemberOfGroups.RemoveMember(groupDistinguishedName, false);
     }
+
+
+    /// <summary>Returns a string that represents the current object.</summary>
+    /// <returns>A string that represents the current object.</returns>
+    public override string ToString()
+    {
+        string result = string.Empty;
+
+        if (!string.IsNullOrEmpty(DisplayName))
+            result = DisplayName;
+        
+        if (!string.IsNullOrEmpty(SAMAccount))
+            result = string.IsNullOrEmpty(result) ? SAMAccount : $"{result} ({SAMAccount})";
+
+        if (result == string.Empty)
+            return DistinguishedName;
+        
+        return result;
+    }
+    
 }
 
