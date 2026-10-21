@@ -24,8 +24,6 @@ public class Program
             UserOu                = "",
         };
         
-        
-
 
         while (true)
         {

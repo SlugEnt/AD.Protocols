@@ -34,7 +34,7 @@ public class ADpExpirationValue
     public DateTime ExpirationDateTimeUtc
     {
         get;
-        set
+        private set
         {
             field = value;
             
@@ -77,7 +77,7 @@ public class ADpExpirationValue
     /// <summary>
     /// Sets the expiration value to never expire.
     /// </summary>
-    public void SetNeverExpires()
+    protected void SetNeverExpires()
     {
         IsNeverExpires = true;
         IsExpired = false;

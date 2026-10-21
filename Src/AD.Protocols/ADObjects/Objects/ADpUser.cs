@@ -352,7 +352,7 @@ public class ADpUser : ADpBaseObject
 
 
     /// <summary>
-    /// Date and Time the password will expire.  This is computed based on the password policy in Active Directory.
+    /// Date and Time (UTC) the password will expire.  This is computed based on the password policy in Active Directory.
     /// <para>Will be null if this attribute was not read form AD</para>
     /// </summary>
     public ADpExpirationValue? PasswordExpiryDateTime { get; internal set; } = null;
@@ -361,12 +361,6 @@ public class ADpUser : ADpBaseObject
     /// Date and time the account expires.
     /// </summary>
     public ADpExpirationValue? AccountExpirey { get; internal set; } = null;
-
-    
-    /// <summary>
-    /// The date the user's password will expire.  This is not an updatable field.  It is calculated based on the password policy that applies for the user.
-    /// </summary>
-    public DateTimeOffset? PasswordExpiration { get; private set; }
 
 
     #endregion
